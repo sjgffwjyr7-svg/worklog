@@ -400,9 +400,12 @@ struct DashboardView: View {
 struct StatChip: View {
     let icon: String, text: String, color: Color
     var body: some View {
-        Label(text, systemImage: icon).font(.caption.weight(.semibold)).foregroundStyle(color)
+        // A plain HStack, not Label: inside List rows Label takes the row's icon layout and stretches.
+        HStack(spacing: 5) { Image(systemName: icon); Text(text) }
+            .font(.caption.weight(.semibold)).foregroundStyle(color).lineLimit(1)
             .padding(.horizontal, 10).padding(.vertical, 6)
             .background(color.opacity(0.13), in: Capsule())
+            .fixedSize()
     }
 }
 
