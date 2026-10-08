@@ -1,0 +1,5 @@
+// Build-Worklog.command creates Local.xcconfig on first use.
+// Use the same bundle identifier for subsequent installs to preserve app identity.
+WORKLOG_BUNDLE_ID = au.yourname.worklog
+WORKLOG_TEAM = YOURTEAMID
+

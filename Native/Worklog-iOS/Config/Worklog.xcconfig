@@ -1,0 +1,6 @@
+// No external packages, service keys or subscription required for a simulator build.
+WORKLOG_BUNDLE_ID = au.worklog.ios
+WORKLOG_TEAM =
+#include? "Local.xcconfig"
+DEVELOPMENT_TEAM = $(WORKLOG_TEAM)
+
