@@ -33,6 +33,6 @@ Record your iPhone iOS version, Xcode version, test date, result and any measure
 - Background and reopen the app during an authentication attempt. A cancelled or late result must not unlock the next session.
 - Verify the app-switcher preview is blank/locked from the dashboard, invoice PDF, import screen and presented share sheet. Check real devices; do not rely only on Simulator.
 - Lock the screen during a recorded drive. Check the trip continues to save GPS points with the usual iOS limitations; confirm no second recorder starts when unlocking.
-- Try Siri while locked: it requests opening/unlocking Worklog. After unlocking, start/update a trip and verify it still confirms the odometer. Lock during confirmation: no change should be made.
+- With Worklog's app lock on and the iPhone locked: Siri should ask you to unlock the iPhone, then start/update the trip after confirming the odometer. Worklog's screens must stay locked until you unlock the app itself. Cancel the confirmation: no change should be made.
 - Disable app lock: cancellation must leave it enabled. Successful authentication must persist the disabled setting.
 - Check saved invoice originals/exports separately: the app lock does not add a password to copies in Files or QNAP.

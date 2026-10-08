@@ -1,6 +1,6 @@
 # Start a work trip with Siri
 
-Once this native iOS build is installed, open Worklog and allow precise location. Configure the vehicle under Schedule. If app lock is enabled, unlock Worklog before invoking Siri.
+Once this native iOS build is installed, open Worklog and allow precise location. Configure the vehicle under Schedule. Siri works whenever the iPhone itself is unlocked, even if Worklog's app lock is on.
 
 Say “Hey Siri, start a work trip in Worklog.”
 
@@ -10,6 +10,6 @@ The trip stores the spoken purpose, starting odometer, configured vehicle and st
 
 Preset commands such as “Start a supply pickup trip in Worklog” remain available and ask for the odometer. Use “Start a trip with my last description in Worklog” to explicitly reuse the previous purpose. “Set starting odometer in Worklog” corrects the active trip after confirmation.
 
-A cancelled confirmation starts nothing. An existing active trip, denied location permission, app lock or failed local saving prevents a new trip. Siri access does not bypass Face ID. Give commands while parked.
+A cancelled confirmation starts nothing. An existing active trip, denied location permission or failed local saving prevents a new trip. iOS requires the iPhone to be unlocked (Face ID or passcode) before Siri runs a Worklog action; Worklog's own app lock keeps its screens locked and is not needed for Siri. Give commands while parked.
 
 This uses Apple App Intents in the native app; the HTML edition has no Siri integration. Source/package checks were completed in the Linux workspace. Xcode compilation, Siri phrase recognition, voice number entry, cancellation, app-lock interactions and GPS on a physical iPhone still need testing. Do not assume a single sentence with arbitrary purpose and odometer will always be understood; use the prompted conversation.

@@ -20,6 +20,9 @@ import AppIntents
 }
 
 // App Intents run in the main app. UI and Siri share one writer and one GPS recorder.
+// Siri actions use authenticationPolicy .requiresAuthentication, so iOS only runs them after the
+// iPhone itself is unlocked (Face ID or passcode). They deliberately do not also require
+// Worklog's own app lock: that lock still guards the app's screens, which stay locked when Siri opens the app.
 @MainActor final class WorklogRuntime {
     static let shared = WorklogRuntime()
     let store = WorkStore()
@@ -72,13 +75,11 @@ struct DictateWorkTripIntent: AppIntent {
             throw $startingOdometer.needsValueError("Give the vehicle's current odometer reading as a non-negative number of kilometres.")
         }
         let runtime = WorklogRuntime.shared
-        guard runtime.lock.canShowRecords else { return .result(dialog: "Open and unlock Worklog, then repeat this command.") }
         let recorder = runtime.recorder
         guard !runtime.store.loadFailed else { return .result(dialog: "Worklog cannot open its saved records. Open the app to resolve the storage error.") }
         guard runtime.store.data.active == nil else { return .result(dialog: "A trip is already recording. Finish it before starting another.") }
         let reading = startingOdometer.formatted(.number.grouping(.automatic))
         try await requestConfirmation(result: .result(dialog: "Start a work trip for \(purpose), with the odometer at \(reading) kilometres?"))
-        guard runtime.lock.canShowRecords else { return .result(dialog: "Worklog locked before confirmation finished. Unlock it and try again.") }
         guard recorder.startManual(purpose: purpose, startingOdometer: startingOdometer) else {
             return .result(dialog: "Trip not started. \(recorder.status)")
         }
@@ -110,7 +111,6 @@ struct StartWorkTripIntent: AppIntent {
             throw $startingOdometer.needsValueError("Give a non-negative odometer reading in kilometres.")
         }
         let runtime = WorklogRuntime.shared
-        guard runtime.lock.canShowRecords else { return .result(dialog: "Open and unlock Worklog, then repeat this command.") }
         let recorder = runtime.recorder
         guard !runtime.store.loadFailed else { return .result(dialog: "Worklog cannot open its saved records. Open the app to resolve the storage error.") }
         guard runtime.store.data.active == nil else { return .result(dialog: "A trip is already recording. Finish it before starting another.") }
@@ -120,7 +120,6 @@ struct StartWorkTripIntent: AppIntent {
         guard !tripDescription.isEmpty else { throw $customDescription.needsValueError("What is the description for this trip?") }
         let reading = String(startingOdometer)
         try await requestConfirmation(result: .result(dialog: "Start \(tripDescription), with starting odometer \(reading) kilometres?"))
-        guard runtime.lock.canShowRecords else { return .result(dialog: "Worklog locked before confirmation finished. Unlock it and try again.") }
         guard recorder.startManual(purpose: tripDescription, startingOdometer: startingOdometer) else {
             return .result(dialog: "Trip not started. \(recorder.status)")
         }
@@ -142,12 +141,10 @@ struct SetStartingOdometerIntent: AppIntent {
     @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
         guard startingOdometer.isFinite && startingOdometer >= 0 else { throw $startingOdometer.needsValueError("Give a non-negative odometer reading in kilometres.") }
         let runtime = WorklogRuntime.shared
-        guard runtime.lock.canShowRecords else { return .result(dialog: "Open and unlock Worklog, then repeat this command.") }
         _ = runtime.recorder // Apply any cold-launch interrupted-trip recovery before choosing a trip.
         guard let target = runtime.store.data.active else { return .result(dialog: "There is no active trip. Start a trip first.") }
         let reading = String(startingOdometer)
         try await requestConfirmation(result: .result(dialog: "Set the starting odometer for \(target.purpose) to \(reading) kilometres?"))
-        guard runtime.lock.canShowRecords else { return .result(dialog: "Worklog locked before confirmation finished. Unlock it and try again.") }
         guard var current = runtime.store.data.active, current.id == target.id else { return .result(dialog: "The active trip changed. No odometer reading was updated.") }
         let previous = current
         current.odometerStart = startingOdometer
