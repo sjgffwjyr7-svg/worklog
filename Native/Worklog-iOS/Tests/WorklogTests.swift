@@ -193,6 +193,30 @@ final class ReceiptTests: XCTestCase {
         XCTAssertEqual(result.items, "Hammer | 22.00\nBolts | 11.00")
         XCTAssertNotNil(result.date)
     }
+    func testTotalIncludesGSTLineIsGSTNotTotal() {
+        let result = ReceiptSuggestion.parse("BUNNINGS WAREHOUSE\nTAX INVOICE\nScrews 50pk $12.98\nSilicone $8.50\nTOTAL $21.48\nTOTAL INCLUDES GST $1.95\nEFTPOS $21.48\n08/10/2026 09:12")
+        XCTAssertEqual(result.total, "21.48")
+        XCTAssertEqual(result.gst, "1.95")
+        let fuel = ReceiptSuggestion.parse("SERVO\nUnleaded 45.20L $88.14\nTotal $88.14\nGST included in total $8.01\n8/10/26")
+        XCTAssertEqual(fuel.total, "88.14")
+        XCTAssertEqual(fuel.gst, "8.01")
+        XCTAssertNotNil(fuel.date)
+        XCTAssertEqual(ReceiptSuggestion.parse("SUPPLIER\nService $100.00\nGST $10.00\nTotal incl GST $110.00").total, "110.00")
+    }
+    @MainActor func testEditingReceiptReplacesOldFiles() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorkStore(root: root)
+        var invoice = Invoice(supplier: "Shop", number: "1", date: Date(), total: "33.00", gst: "3.00", notes: "", pdfFilename: "receipt-old.pdf")
+        try store.saveInvoice(invoice, pdf: Data("%PDF-old".utf8))
+        let oldPDF = store.pdfURL(invoice), oldJSON = store.receiptURL(invoice)
+        invoice.pdfFilename = "receipt-new.pdf"; invoice.total = "34.00"
+        try store.saveInvoice(invoice, pdf: Data("%PDF-new".utf8))
+        XCTAssertEqual(store.data.invoices.count, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: oldPDF.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: oldJSON.path))
+        XCTAssertEqual(try Data(contentsOf: store.pdfURL(invoice)), Data("%PDF-new".utf8))
+    }
     func testNoAssumedGSTOrTotal() {
         let result = ReceiptSuggestion.parse("SHOP\nBread $5.00\nSubtotal $5.00")
         XCTAssertEqual(result.gst, "")

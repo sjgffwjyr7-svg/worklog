@@ -58,6 +58,7 @@ import Combine
         do { try receiptBytes(invoice).write(to: receiptURL(invoice), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
         catch { try? FileManager.default.removeItem(at: url); throw error }
         let previous = data.invoices
+        let replaced = data.invoices.first(where: { $0.id == invoice.id })
         if let index = data.invoices.firstIndex(where: { $0.id == invoice.id }) { data.invoices[index] = invoice }
         else { data.invoices.insert(invoice, at: 0) }
         if !save() {
@@ -65,6 +66,11 @@ import Combine
             try? FileManager.default.removeItem(at: url)
             try? FileManager.default.removeItem(at: receiptURL(invoice))
             throw StoreError.unavailable
+        }
+        // An edit writes a new dated file; remove the superseded copy so Files and exports hold one per receipt.
+        if let replaced, replaced.pdfFilename != invoice.pdfFilename {
+            try? FileManager.default.removeItem(at: pdfURL(replaced))
+            try? FileManager.default.removeItem(at: receiptURL(replaced))
         }
     }
     func exportBackup() throws -> URL {

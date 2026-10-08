@@ -2,6 +2,17 @@
 
 Native SwiftUI development project for iPhone 14 Pro and other iPhones running iOS 17 or later. This is source code, not a signed IPA or TestFlight build. It has not been compiled or run on an Apple device in this workspace; Xcode and the iOS SDK are unavailable here.
 
+## Build and install without a Mac (Windows)
+
+The repository includes `.github/workflows/ios.yml`. Each push to GitHub runs it on GitHub's macOS machines:
+
+- **test**: compiles the app and runs the XCTest suite in an iPhone Simulator. This is the first real compile check.
+- **ipa**: builds `Worklog-unsigned.ipa` for iPhone. Download it from the run's **Artifacts** section.
+
+To install the IPA from a Windows PC, use [Sideloadly](https://sideloadly.io): install Apple iTunes and iCloud (the versions from Apple's website, not the Microsoft Store), connect the iPhone by USB, drag in the IPA, sign in with your Apple ID and press Start. On the iPhone, trust the developer profile in Settings → General → VPN & Device Management, and enable Developer Mode if asked. With a free Apple ID the install expires after 7 days and must be re-signed, and records survive re-signing only when the same bundle identifier is kept. A paid Apple Developer Program membership gives a 1-year signature and allows TestFlight, which avoids the weekly re-sign.
+
+Back up your records (Storage → Save full backup) before replacing or re-signing the app.
+
 ## One-command setup and build
 
 The separate **Create-Worklog-iOS.command** file contains this entire project. On a Mac with Xcode installed and its first-launch setup completed, save that file to Downloads and run:
@@ -37,7 +48,7 @@ Signing: https://help.apple.com/xcode/mac/current/en.lproj/dev60b6fbbc7.html
 - Driving detection from two consecutive moving GPS fixes above about 9 km/h. Very short, slow trips or the beginning of a trip may be missed; test and review this heuristic.
 - Trip separation after about three minutes stopped and automatic finish at shift end, processed when the app receives an execution opportunity.
 - Financial year dashboard for 1 July–30 June in the selected time zone. GPS segments crossing 1 July are split proportionally by elapsed segment time. A corrected distance crossing a boundary is apportioned by trip duration and needs review.
-- Invoice capture using Apple's multipage document scanner, saved as local PDFs. Import an existing photo or PDF; supplier, date, invoice number, total and GST are entered manually. No automatic OCR extraction is claimed.
+- Tax receipt capture using Apple's multipage document scanner, saved as local dated PDFs with a matching per-transaction JSON file. Text is read on the iPhone (Apple Vision) and suggests supplier, items, date, total and GST for you to check and correct before saving. Import an existing photo or PDF the same way.
 - Native share menu for invoice PDF, trip CSV and complete JSON backup. JSON backup includes invoice PDFs. Restore adds missing IDs without overwriting existing records.
 - QNAP transfer through Qfile Pro / Files. Direct or automatic NAS sync is not configured.
 - GPS accuracy filtering and flags for missing data. Missing route sections are never invented. Distance corrections preserve the original GPS measurement and a reason.

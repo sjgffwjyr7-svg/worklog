@@ -101,7 +101,10 @@ struct ReceiptSuggestion {
         let price = try! NSRegularExpression(pattern: #"(?:\$\s*)?(-?\d[\d,]*\.\d{2})\s*(?:[A-Z*])?$"#)
         for line in lines {
             let lower = line.lowercased()
-            let isTotal = lower.range(of: #"^(?:grand\s+total|total(?:\s+(?:aud|amount|due|incl\.?\s*gst))?|amount\s+(?:due|paid))\s*[:$\d ]"#, options: .regularExpression) != nil
+            // "Total includes GST $1.95" / "GST included in total" state the GST share, not the total.
+            let statesGSTShare = lower.range(of: #"\bgst\b"#, options: .regularExpression) != nil
+                && lower.range(of: #"\b(?:includes|including|included)\b"#, options: .regularExpression) != nil
+            let isTotal = !statesGSTShare && lower.range(of: #"^(?:grand\s+total|total(?:\s+(?:aud|amount|due|incl\.?\s*gst))?|amount\s+(?:due|paid))\s*[:$\d ]"#, options: .regularExpression) != nil
             let isGST = lower.range(of: #"\b(?:gst|tax)\b"#, options: .regularExpression) != nil && !isTotal && !lower.contains("tax invoice")
             if let match = price.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)), let range = Range(match.range(at: 1), in: line) {
                 let value = String(line[range]).replacingOccurrences(of: ",", with: "")
@@ -114,11 +117,12 @@ struct ReceiptSuggestion {
             }
         }
         // Australian day/month order; do not silently invent a time from a date-only receipt.
-        let dateRegex = try! NSRegularExpression(pattern: #"\b(\d{1,2}[/-]\d{1,2}[/-]\d{4})(?:\s+(\d{1,2}:\d{2}))?\b"#)
+        let dateRegex = try! NSRegularExpression(pattern: #"\b(\d{1,2}[/-]\d{1,2}[/-](\d{4}|\d{2}))(?:\s+(\d{1,2}:\d{2}))?\b"#)
         if let match = dateRegex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)), let range = Range(match.range, in: text) {
             let value = String(text[range]).replacingOccurrences(of: "-", with: "/")
             let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_AU"); formatter.isLenient = false
-            formatter.dateFormat = match.range(at: 2).location == NSNotFound ? "d/M/yyyy" : "d/M/yyyy H:mm"
+            let year = match.range(at: 2).length == 4 ? "yyyy" : "yy"
+            formatter.dateFormat = match.range(at: 3).location == NSNotFound ? "d/M/\(year)" : "d/M/\(year) H:mm"
             result.date = formatter.date(from: value)
         }
         result.items = items.joined(separator: "\n")

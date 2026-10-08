@@ -1,0 +1,69 @@
+# Builds Worklog on GitHub's macOS machines, so no Mac is needed.
+# 1. "test" compiles the app and runs the XCTest suite in an iPhone Simulator.
+# 2. "ipa" builds an unsigned Worklog-unsigned.ipa for the iPhone. Download it from the
+#    run's Artifacts and install it from Windows with Sideloadly using your Apple ID.
+name: iOS build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: Native/Worklog-iOS
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode version
+        run: xcodebuild -version
+      - name: Pick an iPhone simulator
+        run: |
+          SIM=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = sorted((k for k in devices if "iOS" in k), reverse=True)
+          print(next(d["udid"] for k in ios for d in devices[k] if d["name"].startswith("iPhone")))')
+          echo "SIM=$SIM" >> "$GITHUB_ENV"
+      - name: Build and run tests
+        run: |
+          set -o pipefail
+          xcodebuild -project Worklog.xcodeproj -scheme Worklog -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIM" -derivedDataPath build/Simulator \
+            -parallel-testing-enabled NO -resultBundlePath build/Tests.xcresult \
+            CODE_SIGNING_ALLOWED=NO test | tee build/test.log
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            Native/Worklog-iOS/build/Tests.xcresult
+            Native/Worklog-iOS/build/test.log
+
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build unsigned iPhone app
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild -project Worklog.xcodeproj -scheme Worklog -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/Device \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tee build/device.log
+      - name: Package IPA
+        run: |
+          rm -rf Payload && mkdir Payload
+          cp -R build/Device/Build/Products/Release-iphoneos/Worklog.app Payload/
+          zip -qry Worklog-unsigned.ipa Payload
+          ls -lh Worklog-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Worklog-unsigned-ipa
+          path: Native/Worklog-iOS/Worklog-unsigned.ipa
