@@ -109,6 +109,7 @@ import UIKit
         label.translatesAutoresizingMaskIntoConstraints = false
         controller.view.addSubview(label)
         NSLayoutConstraint.activate([label.centerXAnchor.constraint(equalTo: controller.view.centerXAnchor), label.centerYAnchor.constraint(equalTo: controller.view.centerYAnchor)])
+        cover.overrideUserInterfaceStyle = .dark
         cover.rootViewController = controller; cover.isUserInteractionEnabled = false
         cover.isHidden = false; window = cover
     }
@@ -129,16 +130,15 @@ struct WorklogGate: View {
                     } message: { Text(store.error ?? "") }
             } else {
                 VStack(spacing: 22) {
-                    Image(systemName: "faceid").font(.system(size: 64)).foregroundStyle(.blue)
+                    Image(systemName: "faceid").font(.system(size: 64)).foregroundStyle(Theme.accent)
                     Text("Worklog is locked").font(.title2.bold())
                     Text("Unlock to view your trips and invoices.").foregroundStyle(.secondary)
                     Button { Task { await lock.unlock() } } label: {
                         Label(lock.busy ? "Authenticating…" : "Unlock Worklog", systemImage: "lock.open")
-                            .padding(8)
-                    }.buttonStyle(.borderedProminent).disabled(lock.busy)
+                    }.buttonStyle(PrimaryButtonStyle()).disabled(lock.busy).padding(.horizontal, 20)
                     Text("Use Face ID, Touch ID or your device passcode.").font(.footnote).foregroundStyle(.secondary)
                     if let message = lock.message { Text(message).font(.footnote).multilineTextAlignment(.center) }
-                }.padding(30).frame(maxWidth: .infinity, maxHeight: .infinity).background(Color(uiColor: .systemBackground))
+                }.padding(30).frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.background)
             }
         }
         .onChange(of: phase, initial: true) { _, current in

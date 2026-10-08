@@ -37,6 +37,33 @@ jobs:
             -destination "platform=iOS Simulator,id=$SIM" -derivedDataPath build/Simulator \
             -parallel-testing-enabled NO -resultBundlePath build/Tests.xcresult \
             CODE_SIGNING_ALLOWED=NO test | tee build/test.log
+      - name: Take screenshots with sample data
+        run: |
+          APP=build/Simulator/Build/Products/Debug-iphonesimulator/Worklog.app
+          BUNDLE=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")
+          xcrun simctl boot "$SIM" 2>/dev/null || true
+          xcrun simctl bootstatus "$SIM" -b
+          xcrun simctl ui "$SIM" appearance dark
+          xcrun simctl status_bar "$SIM" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+          xcrun simctl install "$SIM" "$APP"
+          mkdir -p build/screenshots
+          shoot() {
+            xcrun simctl launch --terminate-running-process "$SIM" "$BUNDLE" -WorklogDemo "$@" > /dev/null
+            sleep 6
+            xcrun simctl io "$SIM" screenshot "build/screenshots/$NAME.png"
+          }
+          NAME=1-trips shoot -WorklogTab 0
+          NAME=2-start-trip shoot -WorklogTab 0 -WorklogShowStart
+          NAME=3-receipts shoot -WorklogTab 1
+          NAME=4-add-receipt shoot -WorklogTab 1 -WorklogShowAddReceipt
+          NAME=5-schedule shoot -WorklogTab 2
+          NAME=6-settings shoot -WorklogTab 3
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: Native/Worklog-iOS/build/screenshots
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

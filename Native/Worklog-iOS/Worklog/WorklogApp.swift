@@ -14,7 +14,8 @@ import AppIntents
         WindowGroup {
             WorklogGate().environmentObject(store).environmentObject(recorder)
                 .environmentObject(WorklogRuntime.shared.lock)
-                .tint(Color(red: 0.09, green: 0.24, blue: 0.93))
+                .tint(Theme.accent)
+                .preferredColorScheme(.dark)
         }
     }
 }
@@ -25,10 +26,51 @@ import AppIntents
 // Worklog's own app lock: that lock still guards the app's screens, which stay locked when Siri opens the app.
 @MainActor final class WorklogRuntime {
     static let shared = WorklogRuntime()
-    let store = WorkStore()
+    let store = DemoMode.makeStore()
     let lock = AppLock()
     lazy var recorder = TripRecorder(store: store)
     private init() {}
+}
+
+// Screenshot support for CI: debug builds launched with -WorklogDemo use a throwaway store
+// filled with sample records. Release builds always use the real store and ignore these flags.
+enum DemoMode {
+    static func flag(_ name: String) -> Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains(name)
+        #else
+        return false
+        #endif
+    }
+    static var initialTab: Int {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-WorklogTab"), i + 1 < args.count, let tab = Int(args[i + 1]) { return tab }
+        #endif
+        return 0
+    }
+    @MainActor static func makeStore() -> WorkStore {
+        guard flag("-WorklogDemo") else { return WorkStore() }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("WorklogDemo-\(UUID().uuidString)")
+        let store = WorkStore(root: root)
+        let now = Date(), hour: TimeInterval = 3600, day: TimeInterval = 86400
+        func trip(_ purpose: String, daysAgo: Double, km: Double, review: Bool = false, automatic: Bool = false) -> Trip {
+            var t = Trip(purpose: purpose, vehicle: "Hilux · 1ABC234", start: now - daysAgo * day, automatic: automatic, timeZoneID: "Australia/Perth")
+            t.end = t.start + hour; t.correctedKm = km; t.correctionReason = "Demo"
+            if review { t.review("GPS gap over 60 seconds; missing distance not estimated") }
+            return t
+        }
+        store.data.schedule.vehicle = "Hilux · 1ABC234"
+        store.data.trips = [trip("Supply pickup — Bunnings", daysAgo: 0.2, km: 18.4), trip("Site visit — Narromine farm", daysAgo: 1, km: 62.7, automatic: true),
+                            trip("Customer visit — Smith & Co", daysAgo: 2, km: 34.1, review: true), trip("Workshop visit", daysAgo: 4, km: 12.9),
+                            trip("Training — Dubbo TAFE", daysAgo: 6, km: 8.3)]
+        store.data.lastTripDescription = "Supply pickup — Bunnings"
+        store.data.invoices = [Invoice(supplier: "Bunnings Warehouse", number: "8841", date: now - 0.3 * day, total: "21.48", gst: "1.95", notes: "", category: ExpenseCategories.all[2], pdfFilename: "demo-1.pdf"),
+                               Invoice(supplier: "Ampol Dubbo", number: "", date: now - 2 * day, total: "88.14", gst: "8.01", notes: "", category: ExpenseCategories.all[0], pdfFilename: "demo-2.pdf"),
+                               Invoice(supplier: "Telstra", number: "T-2231", date: now - 9 * day, total: "65.00", gst: "5.91", notes: "", category: ExpenseCategories.all[3], pdfFilename: "demo-3.pdf")]
+        store.save()
+        return store
+    }
 }
 
 enum SiriTripPurpose: String, AppEnum {

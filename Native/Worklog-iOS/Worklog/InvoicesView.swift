@@ -12,6 +12,9 @@ struct InvoicesView: View {
         let span = FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID)
         return store.data.invoices.filter { $0.date >= span.start && $0.date < span.end }.sorted { $0.date > $1.date }
     }
+    var years: [Int] {
+        Array(Set([year, FinancialYear.startYear(), FinancialYear.startYear() - 1] + store.data.invoices.map { FinancialYear.startYear(for: $0.date) })).sorted(by: >)
+    }
     func sum(_ values: [String]) -> String {
         let value = values.reduce(Decimal.zero) { $0 + (Decimal(string: $1, locale: Locale(identifier: "en_US_POSIX")) ?? 0) }
         let formatter = NumberFormatter(); formatter.numberStyle = .currency; formatter.currencyCode = "AUD"; formatter.locale = Locale(identifier: "en_AU")
@@ -20,27 +23,54 @@ struct InvoicesView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Receipt ledger · AUD") {
-                    Stepper("FY \(year)–\(String(year + 1))", value: $year, in: 2000...2100)
-                    LabeledContent("Total spent", value: sum(receipts.map { $0.total }))
-                    LabeledContent("GST recorded", value: sum(receipts.map { $0.gst }))
-                    Text("\(receipts.count) receipts · 1 July–30 June. Spending includes private and reimbursed purchases; it is not a deduction total.").font(.caption)
+                Section {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            FieldLabel("Total spent · AUD")
+                            Spacer()
+                            FinancialYearMenu(year: $year, years: years)
+                        }
+                        Text(sum(receipts.map { $0.total }))
+                            .font(.system(size: 44, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
+                            .minimumScaleFactor(0.5).lineLimit(1)
+                        HStack(spacing: 10) {
+                            StatChip(icon: "percent", text: "GST \(sum(receipts.map { $0.gst }))", color: Theme.mint)
+                            StatChip(icon: "doc.text.fill", text: "\(receipts.count) receipts", color: Theme.accent)
+                        }
+                        Text("Includes private and reimbursed purchases. It is not a deduction total.").font(.caption).foregroundStyle(Theme.textTertiary)
+                    }.padding(.vertical, 8)
+                }
+                Section {
+                    Button { adding = true } label: { Label("Scan tax receipt", systemImage: "doc.viewfinder") }
+                        .buttonStyle(PrimaryButtonStyle()).buttonRow()
                 }
                 if receipts.isEmpty {
-                    ContentUnavailableView("Keep the invoice, too", systemImage: "doc.text.viewfinder", description: Text("Scan a tax invoice into a PDF and keep its supplier, date and amount together."))
-                }
-                ForEach(receipts) { invoice in
-                    NavigationLink { InvoiceDetailView(initialInvoice: invoice) } label: {
-                        HStack {
-                            Image(systemName: "doc.richtext").font(.title2).foregroundStyle(.blue).padding(.trailing, 8)
-                            VStack(alignment: .leading, spacing: 5) { Text(invoice.supplier).font(.headline); Text(invoice.date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary) }
-                            Spacer()
-                            if let amount = Double(invoice.total) { Text(amount, format: .currency(code: "AUD")) }
-                        }.padding(.vertical, 7)
+                    ContentUnavailableView("No receipts this year", systemImage: "doc.text.viewfinder", description: Text("Scan a tax invoice into a PDF and keep its supplier, date and amount together."))
+                        .listRowBackground(Color.clear)
+                } else {
+                    Section("Receipts") {
+                        ForEach(receipts) { invoice in
+                            NavigationLink { InvoiceDetailView(initialInvoice: invoice) } label: {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "doc.text.fill").font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.accent)
+                                        .frame(width: 40, height: 40).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(invoice.supplier).font(.headline).lineLimit(1)
+                                        Text(invoice.category ?? "Uncategorised").font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                                        Text(invoice.date.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(Theme.textTertiary)
+                                    }
+                                    Spacer(minLength: 8)
+                                    if let amount = Double(invoice.total) { Text(amount, format: .currency(code: "AUD")).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint) }
+                                }.padding(.vertical, 4)
+                            }
+                        }
                     }
                 }
-            }.navigationTitle("Invoices").toolbar { Button { adding = true } label: { Label("Tax receipt", systemImage: "plus") } }
+            }
+            .themedForm()
+            .navigationTitle("Receipts")
             .sheet(isPresented: $adding) { AddInvoiceView() }
+            .onAppear { if DemoMode.flag("-WorklogShowAddReceipt") { adding = true } }
         }
     }
 }
@@ -74,37 +104,51 @@ struct AddInvoiceView: View {
             Form {
                 Section {
                     if VNDocumentCameraViewController.isSupported {
-                        Button { scanner = true } label: { Label(pdf == nil ? "Scan tax receipt" : "Replace scan", systemImage: "doc.text.viewfinder") }.disabled(recognizing)
+                        Button { scanner = true } label: { Label(pdf == nil ? "Scan tax receipt" : "Replace scan", systemImage: "doc.text.viewfinder") }
+                            .buttonStyle(PrimaryButtonStyle()).disabled(recognizing).buttonRow()
                     }
-                    Button { importing = true } label: { Label("Import photo or PDF", systemImage: "folder") }.disabled(recognizing)
-                    if let pdf { Label("\(PDFDocument(data: pdf)?.pageCount ?? 0) pages ready", systemImage: "checkmark.circle").foregroundStyle(.green); PDFPreview(data: pdf).frame(height: 230) }
+                    Button { importing = true } label: { Label("Import photo or PDF", systemImage: "folder") }
+                        .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent)).disabled(recognizing).buttonRow()
+                    if let pdf { Label("\(PDFDocument(data: pdf)?.pageCount ?? 0) pages ready", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.mint); PDFPreview(data: pdf).frame(height: 230) }
                 } footer: { Text("The camera detects, crops and straightens the receipt. Text is read on this iPhone after capture. Check suggested items, date, total and GST before saving. Unread amounts stay blank; GST is never calculated from the total.") }
-                if recognizing { ProgressView("Reading receipt on this iPhone…") }
+                if recognizing { ProgressView("Reading receipt on this iPhone…").tint(Theme.accent) }
                 Section("Items purchased") {
-                    TextEditor(text: $items).frame(minHeight: 120)
+                    TextEditor(text: $items).frame(minHeight: 120).scrollContentBackground(.hidden)
+                        .padding(8).background(Theme.field, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     Text("One line per item: description | line total AUD. Correct missed items, quantities, discounts and prices against the original.").font(.caption)
                     DisclosureGroup("Recognized receipt text") { Text(recognizedText.isEmpty ? "No text recognized" : recognizedText).font(.caption).textSelection(.enabled) }
                 }
                 Section("Receipt details") {
-                    TextField("Supplier", text: $supplier)
-                    TextField("Invoice number (optional)", text: $number)
+                    VStack(spacing: 14) {
+                        ThemedTextField(label: "Supplier", prompt: "e.g. Bunnings Dubbo", text: $supplier)
+                        ThemedTextField(label: "Invoice number", prompt: "Optional", text: $number)
+                        HStack(spacing: 12) {
+                            ThemedTextField(label: "Total AUD", prompt: "0.00", text: $total, keyboard: .decimalPad)
+                            ThemedTextField(label: "GST AUD", prompt: "Optional", text: $gst, keyboard: .decimalPad)
+                        }
+                        ThemedTextField(label: "Notes", prompt: "Optional", text: $notes, multiline: true)
+                    }.padding(.vertical, 6)
                     DatePicker("Invoice date", selection: $date, displayedComponents: [.date, .hourAndMinute])
-                    TextField("Total AUD", text: $total).keyboardType(.decimalPad)
-                    TextField("GST AUD (optional)", text: $gst).keyboardType(.decimalPad)
-                    TextField("Notes", text: $notes, axis: .vertical)
                 }
-                Section("Tax classification") {
-                    Picker("Category", selection: $category) { ForEach(ExpenseCategories.all, id: \.self) { Text($0).tag($0) } }
-                    TextField("Custom category / description", text: $customCategory)
-                    TextField("Supplier ABN (if shown)", text: $abn).keyboardType(.numberPad)
-                    TextField("Work / income-producing use %", text: $workPercent).keyboardType(.decimalPad)
-                    TextField("Reimbursed amount AUD", text: $reimbursed).keyboardType(.decimalPad)
-                    Picker("Review", selection: $taxStatus) { ForEach(["Needs accountant review", "Proposed claim — unconfirmed", "Exclude / private"], id: \.self) { Text($0).tag($0) } }
-                    Text("Leave use percentage blank if unsure. Categories and GST entries do not confirm a deduction or GST credit. Your accountant reviews eligibility and private-use adjustments.").font(.footnote).foregroundStyle(.secondary)
+                Section {
+                    VStack(spacing: 14) {
+                        DropdownField(label: "Category", selection: $category, options: ExpenseCategories.all, title: { $0 })
+                        ThemedTextField(label: "Custom category / description", prompt: "Optional", text: $customCategory)
+                        ThemedTextField(label: "Supplier ABN", prompt: "If shown on the receipt", text: $abn, keyboard: .numberPad)
+                        HStack(spacing: 12) {
+                            ThemedTextField(label: "Work use %", prompt: "Blank if unsure", text: $workPercent, keyboard: .decimalPad)
+                            ThemedTextField(label: "Reimbursed AUD", prompt: "0.00", text: $reimbursed, keyboard: .decimalPad)
+                        }
+                        DropdownField(label: "Accountant review", selection: $taxStatus, options: ["Needs accountant review", "Proposed claim — unconfirmed", "Exclude / private"], title: { $0 })
+                    }.padding(.vertical, 6)
+                } header: { Text("Tax classification") } footer: {
+                    Text("Categories and GST entries do not confirm a deduction or GST credit. Your accountant reviews eligibility and private-use adjustments.")
                 }
-                Toggle("I checked the items, date, total and GST", isOn: $reviewed)
-                if let error { Text(error).foregroundStyle(.red) }
-            }.navigationTitle(existing == nil ? "Tax receipt" : "Edit tax receipt").onAppear {
+                Section {
+                    Toggle("I checked the items, date, total and GST", isOn: $reviewed)
+                }
+                if let error { Label(error, systemImage: "exclamationmark.circle.fill").font(.subheadline).foregroundStyle(Theme.warning) }
+            }.themedForm().navigationTitle(existing == nil ? "Tax receipt" : "Edit tax receipt").navigationBarTitleDisplayMode(.inline).onAppear {
                 guard !initialized else { return }; initialized = true
                 if existing == nil && VNDocumentCameraViewController.isSupported { scanner = true }
                 if let i = existing, pdf == nil {
@@ -116,7 +160,7 @@ struct AddInvoiceView: View {
                 }
             }.toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(recognizing || !reviewed || total.isEmpty || pdf == nil || supplier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.fontWeight(.bold).disabled(recognizing || !reviewed || total.isEmpty || pdf == nil || supplier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
             }.fullScreenCover(isPresented: $scanner) {
                 InvoiceScanner(completed: { pdf = $0; scanner = false; recognize($0) }, cancelled: { scanner = false }, failed: { error = $0; scanner = false }).ignoresSafeArea()
             }.fileImporter(isPresented: $importing, allowedContentTypes: [.pdf, .image]) { result in
@@ -172,7 +216,11 @@ struct InvoiceDetailView: View {
     @State private var share: ShareFiles?
     var body: some View {
         List {
-            Section(invoice.supplier) {
+            Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(invoice.supplier).font(.title2.weight(.bold))
+                    if let amount = Double(invoice.total) { Text(amount, format: .currency(code: "AUD")).font(.system(size: 34, weight: .bold, design: .rounded)).foregroundStyle(Theme.mint) }
+                }.padding(.vertical, 6)
                 LabeledContent("Date", value: invoice.date.formatted(date: .abbreviated, time: .shortened))
                 LabeledContent("Recorded", value: invoice.captured.formatted(date: .abbreviated, time: .shortened))
                 if let items = invoice.items, !items.isEmpty { Text(items) }
@@ -181,13 +229,18 @@ struct InvoiceDetailView: View {
                 LabeledContent("GST AUD", value: invoice.gst.isEmpty ? "Not entered" : invoice.gst)
                 LabeledContent("Category", value: invoice.category ?? "Other / custom category")
                 LabeledContent("Review", value: invoice.taxStatus ?? "Needs accountant review")
-                Button("Edit invoice and tax details") { editing = true }
                 if !invoice.notes.isEmpty { Text(invoice.notes) }
             }
-            if let pdf { PDFPreview(data: pdf).frame(height: 430) }
-            Button { share = ShareFiles(urls: [store.pdfURL(invoice)]) } label: { Label("Save to Files / Qfile Pro", systemImage: "square.and.arrow.up") }
-            Text("Choose Save to Files or Qfile Pro, then complete the upload to your QNAP. Check Qfile Pro for upload success.").font(.footnote).foregroundStyle(.secondary)
-        }.navigationTitle("Invoice").sheet(isPresented: $editing, onDismiss: { pdf = try? Data(contentsOf: store.pdfURL(invoice)) }) { AddInvoiceView(existing: invoice) }.task { do { pdf = try Data(contentsOf: store.pdfURL(invoice)) } catch { store.error = "The original invoice could not be opened: \(error.localizedDescription)" } }
+            Section {
+                Button { editing = true } label: { Label("Edit receipt and tax details", systemImage: "pencil") }
+                    .buttonStyle(PrimaryButtonStyle()).buttonRow()
+            }
+            if let pdf { Section("Original") { PDFPreview(data: pdf).frame(height: 430) } }
+            Section {
+                Button { share = ShareFiles(urls: [store.pdfURL(invoice)]) } label: { Label("Save to Files / Qfile Pro", systemImage: "square.and.arrow.up") }
+                    .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent)).buttonRow()
+            } footer: { Text("Choose Save to Files or Qfile Pro, then complete the upload to your QNAP. Check Qfile Pro for upload success.") }
+        }.themedForm().navigationTitle("Receipt").navigationBarTitleDisplayMode(.inline).sheet(isPresented: $editing, onDismiss: { pdf = try? Data(contentsOf: store.pdfURL(invoice)) }) { AddInvoiceView(existing: invoice) }.task { do { pdf = try Data(contentsOf: store.pdfURL(invoice)) } catch { store.error = "The original invoice could not be opened: \(error.localizedDescription)" } }
         .sheet(item: $share) { ShareSheet(urls: $0.urls) }
     }
 }
@@ -205,8 +258,12 @@ struct StorageView: View {
                     LabeledContent("Work trips", value: "\(store.data.trips.count)")
                     LabeledContent("Invoices", value: "\(store.data.invoices.count)")
                     Text("Records and scanned PDFs live on this iPhone. GPS works without mobile data. No records expire automatically. Keep dated backups on your QNAP and another device for the period your accountant requires. Deleting the app removes local records.").font(.subheadline)
-                    Button("Save full backup") { do { share = ShareFiles(urls: [try store.exportBackup()]) } catch { store.error = error.localizedDescription } }
-                    Button("Restore an iOS backup") { importing = true }
+                }
+                Section {
+                    Button { do { share = ShareFiles(urls: [try store.exportBackup()]) } catch { store.error = error.localizedDescription } } label: { Label("Save full backup", systemImage: "externaldrive.fill.badge.checkmark") }
+                        .buttonStyle(PrimaryButtonStyle()).buttonRow()
+                    Button { importing = true } label: { Label("Restore an iOS backup", systemImage: "arrow.counterclockwise") }
+                        .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent)).buttonRow()
                 }
                 Section("Siri commands") {
                     Text("Say: Start a supply pickup trip in Worklog. Siri asks for the starting odometer, then confirms the description and number.")
@@ -223,8 +280,8 @@ struct StorageView: View {
                 Section("Privacy") {
                     Text("No advertising, analytics or cloud account. The app requests camera access to scan invoices and location access to measure work trips. Scheduled monitoring retains positions only during recorded work trips.")
                 }
-                if !notice.isEmpty { Text(notice) }
-            }.navigationTitle("Storage").sheet(item: $share) { ShareSheet(urls: $0.urls) }
+                if !notice.isEmpty { Label(notice, systemImage: "checkmark.circle.fill").foregroundStyle(Theme.mint) }
+            }.themedForm().navigationTitle("Settings").sheet(item: $share) { ShareSheet(urls: $0.urls) }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
                 do { try store.restoreBackup(result.get()); notice = "Missing records restored. Existing records were kept." } catch { store.error = error.localizedDescription }
             }
