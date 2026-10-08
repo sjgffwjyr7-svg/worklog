@@ -1,0 +1,98 @@
+# Builds an iOS app on GitHub's macOS machines, so no Mac is needed.
+#  - test:  generates the Xcode project from project.yml (if present), runs XCTest in a
+#           simulator, then captures screenshots listed in screenshots.txt using demo data.
+#  - ipa:   builds an unsigned <Scheme>-unsigned.ipa to install from Windows with Sideloadly.
+# Set APP_DIR and SCHEME below for each app.
+name: iOS build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  APP_DIR: .            # folder holding project.yml or <Scheme>.xcodeproj
+  SCHEME: MyApp         # Xcode scheme / app target name
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: |
+          if [ -f project.yml ]; then brew install xcodegen >/dev/null && xcodegen generate; fi
+          xcodebuild -version
+      - name: Pick an iPhone simulator
+        run: |
+          SIM=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = sorted((k for k in devices if "iOS" in k), reverse=True)
+          print(next(d["udid"] for k in ios for d in devices[k] if d["name"].startswith("iPhone")))')
+          echo "SIM=$SIM" >> "$GITHUB_ENV"
+      - name: Build and run tests
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild -project "$SCHEME.xcodeproj" -scheme "$SCHEME" -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIM" -derivedDataPath build/Simulator \
+            -parallel-testing-enabled NO -resultBundlePath build/Tests.xcresult \
+            CODE_SIGNING_ALLOWED=NO test | tee build/test.log
+      - name: Take screenshots with demo data
+        run: |
+          [ -f screenshots.txt ] || { echo "No screenshots.txt"; exit 0; }
+          APP="build/Simulator/Build/Products/Debug-iphonesimulator/$SCHEME.app"
+          BUNDLE=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")
+          xcrun simctl boot "$SIM" 2>/dev/null || true
+          xcrun simctl bootstatus "$SIM" -b
+          xcrun simctl ui "$SIM" appearance dark
+          xcrun simctl status_bar "$SIM" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+          xcrun simctl install "$SIM" "$APP"
+          mkdir -p build/screenshots
+          # Each line: <file-name> <launch arguments...>   e.g.  1-home -DemoData -DemoTab 0
+          while read -r NAME ARGS; do
+            [ -z "$NAME" ] || [ "${NAME#\#}" != "$NAME" ] && continue
+            xcrun simctl launch --terminate-running-process "$SIM" "$BUNDLE" $ARGS > /dev/null
+            sleep 6
+            xcrun simctl io "$SIM" screenshot "build/screenshots/$NAME.png"
+          done < screenshots.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: screenshots, path: "${{ env.APP_DIR }}/build/screenshots" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            ${{ env.APP_DIR }}/build/Tests.xcresult
+            ${{ env.APP_DIR }}/build/test.log
+
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: if [ -f project.yml ]; then brew install xcodegen >/dev/null && xcodegen generate; fi
+      - name: Build unsigned iPhone app
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild -project "$SCHEME.xcodeproj" -scheme "$SCHEME" -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/Device \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tee build/device.log
+      - name: Package IPA
+        run: |
+          rm -rf Payload && mkdir Payload
+          cp -R "build/Device/Build/Products/Release-iphoneos/$SCHEME.app" Payload/
+          zip -qry "$SCHEME-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with: { name: "${{ env.SCHEME }}-unsigned-ipa", path: "${{ env.APP_DIR }}/${{ env.SCHEME }}-unsigned.ipa" }
