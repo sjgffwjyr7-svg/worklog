@@ -253,6 +253,7 @@ struct StorageView: View {
     var body: some View {
         NavigationStack {
             Form {
+                VehiclesSettingsSection()
                 AppLockSettings()
                 Section("On this iPhone") {
                     LabeledContent("Work trips", value: "\(store.data.trips.count)")

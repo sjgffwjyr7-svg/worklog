@@ -172,8 +172,12 @@ struct DashboardView: View {
     @State private var startingOdometer = ""
     @State private var purpose = ""
     @State private var share: ShareFiles?
+    @State private var vehicleFilter: UUID?
+    @State private var addingVehicle = false
+    @State private var addingVehicleFromStart = false
+    @State private var odometerWarning: OdometerCheck?
     var interval: DateInterval { FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID) }
-    var trips: [Trip] { store.data.trips.filter { ($0.end ?? $0.start) > interval.start && $0.start < interval.end }.sorted { $0.start > $1.start } }
+    var trips: [Trip] { store.data.trips.filter { ($0.end ?? $0.start) > interval.start && $0.start < interval.end && (vehicleFilter == nil || $0.vehicleID == vehicleFilter) }.sorted { $0.start > $1.start } }
     var years: [Int] { Array(Set([year, FinancialYear.startYear(), FinancialYear.startYear()-1] + store.data.trips.map { FinancialYear.startYear(for: $0.start) } + store.data.invoices.map { FinancialYear.startYear(for: $0.date) })).sorted(by: >) }
     var totalKm: Double { trips.reduce(0) { $0 + $1.km(in: interval) } }
     var reviewCount: Int { trips.filter { !$0.reviewReasons.isEmpty }.count }
@@ -188,6 +192,23 @@ struct DashboardView: View {
                         }
                         Spacer()
                         FinancialYearMenu(year: $year, years: years)
+                    }
+                    if store.vehicles.count > 1 {
+                        Menu {
+                            Picker("Vehicle log", selection: $vehicleFilter) {
+                                Text("All vehicles").tag(UUID?.none)
+                                ForEach(store.vehicles) { Text($0.displayName).tag(Optional($0.id)) }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "car.2.fill")
+                                Text(store.vehicle(vehicleFilter)?.displayName ?? "All vehicles").lineLimit(1)
+                                Image(systemName: "chevron.down").font(.caption.weight(.bold))
+                            }
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(Theme.mint.opacity(0.13), in: Capsule())
+                        }
                     }
                     totalCard
                     recorderCard
@@ -231,9 +252,21 @@ struct DashboardView: View {
             .navigationTitle("Worklog")
             .toolbarBackground(Theme.background, for: .navigationBar)
             .sheet(isPresented: $starting) { startSheet }
+            .sheet(isPresented: $addingVehicle) { VehicleEditorView(existing: nil) }
             .sheet(item: $share) { ShareSheet(urls: $0.urls) }
             .onAppear { if DemoMode.flag("-WorklogShowStart") { purpose = store.lastTripDescription; starting = true } }
         }
+    }
+
+    /// Starts a manual trip, first checking that the odometer suits the chosen vehicle.
+    func attemptStart(vehicleID: UUID? = nil, checked: Bool = false) {
+        let reading = Double(startingOdometer)
+        if !startingOdometer.isEmpty && (reading == nil || !(reading?.isFinite ?? false) || (reading ?? -1) < 0) {
+            store.error = "Enter a valid starting odometer in kilometres."; return
+        }
+        let chosen = vehicleID ?? store.currentVehicle?.id
+        if !checked, let reading, let check = store.odometerCheck(reading: reading, vehicleID: chosen) { odometerWarning = check; return }
+        if recorder.startManual(purpose: purpose, startingOdometer: reading, vehicleID: chosen) { starting = false }
     }
 
     var totalCard: some View {
@@ -248,7 +281,7 @@ struct DashboardView: View {
                 StatChip(icon: "car.side.fill", text: "\(trips.count) trips", color: Theme.accent)
                 if reviewCount > 0 { StatChip(icon: "exclamationmark.triangle.fill", text: "\(reviewCount) to review", color: Theme.warning) }
                 Spacer()
-                StatChip(icon: "lock.iphone", text: "On iPhone", color: Theme.mint)
+                StatChip(icon: "lock.iphone", text: "On iPhone", color: Theme.mint).fixedSize()
             }
         }.cardStyle(padding: 22)
     }
@@ -269,7 +302,8 @@ struct DashboardView: View {
                         .font(.system(size: 46, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
                     Text("km GPS").font(.headline).foregroundStyle(Theme.mint)
                 }
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
+                    CurrentVehicleMenu(addingVehicle: $addingVehicle)
                     Text(trip.purpose).font(.headline).foregroundStyle(Theme.textPrimary)
                     if let odometer = trip.odometerStart {
                         Text("Starting odometer \(odometer, format: .number.precision(.fractionLength(0...1))) km").font(.subheadline).foregroundStyle(Theme.textSecondary)
@@ -286,6 +320,7 @@ struct DashboardView: View {
                     Spacer()
                     Image(systemName: "steeringwheel").font(.system(size: 30, weight: .semibold)).foregroundStyle(Theme.accent)
                 }
+                CurrentVehicleMenu(addingVehicle: $addingVehicle)
                 Button { purpose = store.lastTripDescription; startingOdometer = ""; starting = true } label: { Label("Start work trip", systemImage: "play.fill") }
                     .buttonStyle(PrimaryButtonStyle())
             }
@@ -302,7 +337,8 @@ struct DashboardView: View {
                 .frame(width: 42, height: 42).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
                 Text(trip.purpose).font(.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                Text(trip.start, format: .dateTime.weekday(.abbreviated).day().month().hour().minute()).font(.caption).foregroundStyle(Theme.textSecondary)
+                (Text(trip.start, format: .dateTime.weekday(.abbreviated).day().month().hour().minute()) + Text(trip.vehicle.isEmpty ? "" : " · \(trip.vehicle)"))
+                    .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
                 if !trip.reviewReasons.isEmpty { Label("Review GPS coverage", systemImage: "exclamationmark.triangle.fill").font(.caption2.weight(.semibold)).foregroundStyle(Theme.warning) }
             }
             Spacer(minLength: 8)
@@ -318,17 +354,22 @@ struct DashboardView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    if store.vehicles.isEmpty {
+                        Button { addingVehicleFromStart = true } label: { Label("Add your vehicle", systemImage: "car.fill") }
+                            .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent))
+                    } else {
+                        VStack(alignment: .trailing, spacing: 8) {
+                            DropdownField(label: "Vehicle", selection: Binding(get: { store.currentVehicle?.id }, set: { if let id = $0 { store.selectVehicle(id) } }),
+                                          options: store.vehicles.map { Optional($0.id) }, title: { store.vehicle($0)?.displayName ?? "Choose a vehicle" })
+                            Button { addingVehicleFromStart = true } label: { Label("Add vehicle", systemImage: "plus") }
+                                .font(.footnote.weight(.semibold)).foregroundStyle(Theme.accent)
+                        }
+                    }
                     TripDescriptionField(purpose: $purpose)
                     ThemedTextField(label: "Starting odometer (km)", prompt: "Optional — e.g. 128450", text: $startingOdometer, keyboard: .decimalPad)
                     Label("Your last description is ready for the next trip. Manual trips count as work trips, including outside scheduled hours.", systemImage: "info.circle")
                         .font(.footnote).foregroundStyle(Theme.textSecondary)
-                    Button {
-                        let reading = Double(startingOdometer)
-                        if !startingOdometer.isEmpty && (reading == nil || !(reading?.isFinite ?? false) || (reading ?? -1) < 0) {
-                            store.error = "Enter a valid starting odometer in kilometres."; return
-                        }
-                        if recorder.startManual(purpose: purpose, startingOdometer: reading) { starting = false }
-                    } label: { Label("Start recording", systemImage: "play.fill") }
+                    Button { attemptStart() } label: { Label("Start recording", systemImage: "play.fill") }
                         .buttonStyle(PrimaryButtonStyle())
                         .disabled(purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .opacity(purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
@@ -337,6 +378,15 @@ struct DashboardView: View {
             .background(Theme.background)
             .navigationTitle("Start work trip").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { starting = false } } }
+            .sheet(isPresented: $addingVehicleFromStart) { VehicleEditorView(existing: nil) }
+            .alert(odometerWarning?.suggested != nil ? "Different vehicle?" : "Check the odometer",
+                   isPresented: Binding(get: { odometerWarning != nil }, set: { if !$0 { odometerWarning = nil } }), presenting: odometerWarning) { check in
+                if let suggested = check.suggested {
+                    Button("Use the \(suggested.displayName)") { attemptStart(vehicleID: suggested.id, checked: true) }
+                }
+                Button(check.selected.map { "Keep the \($0.displayName)" } ?? "Start anyway") { attemptStart(vehicleID: check.selected?.id, checked: true) }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text($0.message) }
         }
         .presentationDetents([.medium, .large])
         .presentationBackground(Theme.background)
@@ -359,6 +409,7 @@ struct TripDetailView: View {
     @State private var odometerStart = ""
     @State private var odometerEnd = ""
     @State private var excluded = false
+    @State private var vehicleID: UUID?
     @State private var corrected = ""
     @State private var reason = ""
     @State private var message = ""
@@ -387,6 +438,8 @@ struct TripDetailView: View {
                         .buttonRow()
                 }
                 Section("Accountant details") {
+                    DropdownField(label: "Vehicle", selection: $vehicleID, options: [nil] + store.vehicles.map { Optional($0.id) },
+                                  title: { store.vehicle($0)?.displayName ?? "No vehicle" }).padding(.vertical, 6)
                     HStack(spacing: 12) {
                         ThemedTextField(label: "Odometer start", prompt: "km", text: $odometerStart, keyboard: .decimalPad)
                         ThemedTextField(label: "Odometer finish", prompt: "km", text: $odometerEnd, keyboard: .decimalPad)
@@ -396,7 +449,8 @@ struct TripDetailView: View {
                             let first = Double(odometerStart), last = Double(odometerEnd)
                             if (!odometerStart.isEmpty && (first == nil || !(first?.isFinite ?? false) || (first ?? -1) < 0)) || (!odometerEnd.isEmpty && (last == nil || !(last?.isFinite ?? false) || (last ?? -1) < 0)) { message = "Enter valid odometer readings."; return }
                             if let first, let last, last < first { message = "Finish reading cannot be below start."; return }
-                            update { $0.odometerStart = first; $0.odometerEnd = last; $0.excluded = excluded }
+                            let chosen = store.vehicle(vehicleID)
+                            update { $0.odometerStart = first; $0.odometerEnd = last; $0.excluded = excluded; $0.vehicleID = chosen?.id; $0.vehicle = chosen?.displayName ?? $0.vehicle }
                     }.buttonStyle(PrimaryButtonStyle()).buttonRow()
                 }
                 Section {
@@ -414,7 +468,7 @@ struct TripDetailView: View {
         }
         .themedForm()
         .navigationTitle("Trip details")
-        .onAppear { if let t = trip { purpose = t.purpose; odometerStart = t.odometerStart.map { String($0) } ?? ""; odometerEnd = t.odometerEnd.map { String($0) } ?? ""; excluded = t.excluded ?? false; corrected = String(format: "%.3f", t.km); reason = t.correctionReason } }
+        .onAppear { if let t = trip { purpose = t.purpose; odometerStart = t.odometerStart.map { String($0) } ?? ""; odometerEnd = t.odometerEnd.map { String($0) } ?? ""; excluded = t.excluded ?? false; vehicleID = t.vehicleID; corrected = String(format: "%.3f", t.km); reason = t.correctionReason } }
     }
     func update(_ change: (inout Trip) -> Void) { guard let i = store.data.trips.firstIndex(where: { $0.id == tripID }) else { return }; let original = store.data.trips[i]; change(&store.data.trips[i]); if store.save() { message = "Saved." } else { store.data.trips[i] = original } }
 }
@@ -453,7 +507,8 @@ struct ScheduleView: View {
                 } header: { Text("Work hours") } footer: { Text("A finish before the start time means an overnight shift. Selected days are the days a shift begins.") }
                 Section("Trip defaults") {
                     VStack(spacing: 14) {
-                        ThemedTextField(label: "Vehicle / registration", prompt: "e.g. Hilux 1ABC234", text: $draft.vehicle)
+                        Label("Scheduled trips use your current vehicle: \(store.currentVehicle?.displayName ?? "none added yet"). Change it on the Trips screen or ask Siri.", systemImage: "car.fill")
+                            .font(.subheadline).foregroundStyle(Theme.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
                         ThemedTextField(label: "Work purpose", prompt: "e.g. Scheduled work driving", text: $draft.purpose)
                     }.padding(.vertical, 6)
                 }
@@ -502,5 +557,115 @@ struct TripDescriptionField: View {
             ThemedTextField(label: "Trip description", prompt: "Add job or customer name", text: $purpose, multiline: true)
                 .onSubmit { store.rememberTripDescription(purpose) }
         }
+    }
+}
+
+// MARK: - Vehicles
+
+/// Capsule menu showing the remembered current vehicle; choosing another switches it (and any recording trip).
+struct CurrentVehicleMenu: View {
+    @EnvironmentObject var store: WorkStore
+    @Binding var addingVehicle: Bool
+    var body: some View {
+        Menu {
+            Picker("Vehicle", selection: Binding(get: { store.currentVehicle?.id }, set: { if let id = $0 { store.selectVehicle(id) } })) {
+                ForEach(store.vehicles) { Text($0.displayName).tag(Optional($0.id)) }
+            }
+            Divider()
+            Button { addingVehicle = true } label: { Label("Add vehicle", systemImage: "plus") }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "car.fill")
+                Text(store.currentVehicle?.displayName ?? "Add a vehicle").lineLimit(1)
+                Image(systemName: "chevron.down").font(.caption.weight(.bold))
+            }
+            .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(Theme.accent.opacity(0.14), in: Capsule())
+        }
+    }
+}
+
+struct VehicleEditorView: View {
+    let existing: Vehicle?
+    @EnvironmentObject var store: WorkStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var registration = ""
+    @State private var odometer = ""
+    @State private var error: String?
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    ThemedTextField(label: "Vehicle name", prompt: "e.g. Hilux, Work ute", text: $name)
+                    ThemedTextField(label: "Registration", prompt: "Optional — e.g. 1ABC234", text: $registration)
+                    ThemedTextField(label: "Current odometer (km)", prompt: "Optional — helps spot the wrong vehicle", text: $odometer, keyboard: .decimalPad)
+                    Text("Worklog compares each starting odometer with every vehicle's last reading and asks if it looks like you're in a different vehicle.")
+                        .font(.footnote).foregroundStyle(Theme.textSecondary)
+                    if let error { Label(error, systemImage: "exclamationmark.circle.fill").font(.subheadline).foregroundStyle(Theme.warning) }
+                    Button { save() } label: { Label("Save vehicle", systemImage: "checkmark") }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }.padding(20)
+            }
+            .background(Theme.background)
+            .navigationTitle(existing == nil ? "Add vehicle" : "Edit vehicle").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .onAppear {
+                guard let existing else { return }
+                name = existing.name; registration = existing.registration
+                odometer = existing.startingOdometer.map { String($0) } ?? ""
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationBackground(Theme.background)
+    }
+    func save() {
+        let reading = Double(odometer)
+        if !odometer.isEmpty && (reading == nil || !(reading?.isFinite ?? false) || (reading ?? -1) < 0) { error = "Enter a valid odometer in kilometres."; return }
+        var vehicle = existing ?? Vehicle(name: "")
+        vehicle.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        vehicle.registration = registration.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        vehicle.startingOdometer = reading
+        guard store.saveVehicle(vehicle, makeCurrent: existing == nil) else { error = "The vehicle was not saved. Check device storage."; return }
+        WorklogShortcuts.updateAppShortcutParameters()
+        dismiss()
+    }
+}
+
+struct VehiclesSettingsSection: View {
+    @EnvironmentObject var store: WorkStore
+    @State private var editing: Vehicle?
+    @State private var adding = false
+    var body: some View {
+        Section {
+            ForEach(store.vehicles) { vehicle in
+                Button { editing = vehicle } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "car.fill").foregroundStyle(Theme.accent)
+                            .frame(width: 38, height: 38).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(vehicle.displayName).font(.headline).foregroundStyle(Theme.textPrimary)
+                            Text(store.lastOdometer(for: vehicle.id).map { "Last odometer \($0.formatted(.number.precision(.fractionLength(0...1)))) km" } ?? "No odometer yet")
+                                .font(.caption).foregroundStyle(Theme.textSecondary)
+                        }
+                        Spacer()
+                        if vehicle.id == store.currentVehicle?.id { StatChip(icon: "checkmark", text: "Current", color: Theme.mint).fixedSize() }
+                    }
+                }
+                .swipeActions {
+                    Button(role: .destructive) {
+                        do { try store.deleteVehicle(vehicle.id); WorklogShortcuts.updateAppShortcutParameters() } catch { store.error = error.localizedDescription }
+                    } label: { Label("Delete", systemImage: "trash") }
+                }
+            }
+            Button { adding = true } label: { Label("Add vehicle", systemImage: "plus") }
+                .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent)).buttonRow()
+        } header: { Text("Vehicles") } footer: {
+            Text("Each vehicle keeps its own trip log and export. The current vehicle is remembered when Worklog closes, and Siri can change it: “Change vehicle in Worklog”.")
+        }
+        .sheet(item: $editing) { VehicleEditorView(existing: $0) }
+        .sheet(isPresented: $adding) { VehicleEditorView(existing: nil) }
     }
 }

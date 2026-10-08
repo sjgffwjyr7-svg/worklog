@@ -61,6 +61,7 @@ struct Trip: Codable, Identifiable {
     var correctedKm: Double? = nil
     var correctionReason = ""
     var correctedAt: Date? = nil
+    var vehicleID: UUID? = nil
     var metres: Double { points.reduce(0) { $0 + $1.segmentMetres } }
     var km: Double { correctedKm ?? metres / 1000 }
     mutating func review(_ reason: String) { if !reviewReasons.contains(reason) { reviewReasons.append(reason) } }
@@ -101,7 +102,27 @@ struct Invoice: Codable, Identifiable {
     var receiptReviewed: Bool? = nil
     var pdfFilename: String
 }
+struct Vehicle: Codable, Identifiable, Hashable {
+    var id = UUID()
+    var name: String
+    var registration = ""
+    /// Odometer when the vehicle was added; later readings come from its trips.
+    var startingOdometer: Double? = nil
+    var displayName: String { registration.isEmpty ? name : "\(name) · \(registration)" }
+}
+
+/// Result of comparing an entered odometer with each vehicle's last known reading.
+struct OdometerCheck {
+    var selected: Vehicle?
+    var selectedLast: Double?
+    var suggested: Vehicle?
+    var suggestedLast: Double?
+    var message: String
+}
+
 struct WorkData: Codable {
+    var vehicles: [Vehicle]? = nil
+    var currentVehicleID: UUID? = nil
     var lastTripDescription: String? = nil
     var recentTripDescriptions: [String]? = nil
     var schemaVersion = 1

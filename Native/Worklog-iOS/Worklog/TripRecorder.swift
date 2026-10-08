@@ -68,17 +68,22 @@ import Combine
         running = true
         status = authorization == .authorizedAlways ? "Monitoring work schedule" : "Open Settings and allow Always location for scheduled recording"
     }
-    @discardableResult func startManual(purpose: String, startingOdometer: Double? = nil) -> Bool {
+    @discardableResult func startManual(purpose: String, startingOdometer: Double? = nil, vehicleID: UUID? = nil) -> Bool {
         let description = purpose.trimmingCharacters(in: .whitespacesAndNewlines)
         guard store.data.active == nil else { status = "A trip is already recording. Finish it first."; return false }
         guard !description.isEmpty else { status = "Enter a trip description."; return false }
         if let reading = startingOdometer, !reading.isFinite || reading < 0 { status = "Enter a valid starting odometer in kilometres."; return false }
         guard authorization == .authorizedAlways || authorization == .authorizedWhenInUse else { requestPermission(); status = "Allow location, then start the trip again"; return false }
         guard store.rememberTripDescription(description) else { status = "Trip was not started because local saving failed."; return false }
-        var trip = Trip(purpose: description, vehicle: store.data.schedule.vehicle, start: Date(), automatic: false, timeZoneID: store.data.schedule.timeZoneID)
+        let vehicle = store.vehicle(vehicleID) ?? store.currentVehicle
+        var trip = Trip(purpose: description, vehicle: vehicle?.displayName ?? store.data.schedule.vehicle, start: Date(), automatic: false, timeZoneID: store.data.schedule.timeZoneID)
         trip.odometerStart = startingOdometer
+        trip.vehicleID = vehicle?.id
+        let previousVehicle = store.data.currentVehicleID
         store.data.active = trip
-        guard store.save() else { store.data.active = nil; status = "Trip was not saved. Check device storage and try again."; return false }
+        // The vehicle used for this trip becomes the remembered current vehicle.
+        if let vehicle { store.data.currentVehicleID = vehicle.id }
+        guard store.save() else { store.data.active = nil; store.data.currentVehicleID = previousVehicle; status = "Trip was not saved. Check device storage and try again."; return false }
         anchor = nil; lastMovement = nil; configure(); status = "Finding GPS…"
         return true
     }
@@ -138,7 +143,9 @@ import Combine
                   fix.timestamp.timeIntervalSince(first.timestamp) <= 30,
                   first.timestamp >= window.start,
                   fix.distance(from: first) >= 8 else { candidate = fix; return }
-            var trip = Trip(purpose: store.data.schedule.purpose, vehicle: store.data.schedule.vehicle, start: first.timestamp, automatic: true, scheduleEnd: window.end, timeZoneID: store.data.schedule.timeZoneID)
+            let vehicle = store.currentVehicle
+            var trip = Trip(purpose: store.data.schedule.purpose, vehicle: vehicle?.displayName ?? store.data.schedule.vehicle, start: first.timestamp, automatic: true, scheduleEnd: window.end, timeZoneID: store.data.schedule.timeZoneID)
+            trip.vehicleID = vehicle?.id
             trip.points = [GPSPoint(first)]
             store.data.active = trip; anchor = trip.points.first; lastMovement = first.timestamp
             if !store.save() { store.data.active = nil; anchor = nil; return }

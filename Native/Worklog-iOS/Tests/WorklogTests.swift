@@ -217,6 +217,46 @@ final class ReceiptTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: oldJSON.path))
         XCTAssertEqual(try Data(contentsOf: store.pdfURL(invoice)), Data("%PDF-new".utf8))
     }
+    @MainActor func testOldFreeTextVehiclesBecomeVehicles() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var old = WorkData(); old.schedule.vehicle = "Hilux"
+        old.trips = [Trip(purpose: "Work", vehicle: "Hilux", start: Date(), automatic: false, timeZoneID: "Australia/Perth"),
+                     Trip(purpose: "Work", vehicle: "Ranger", start: Date(), automatic: false, timeZoneID: "Australia/Perth")]
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try JSONEncoder().encode(old).write(to: root.appendingPathComponent("worklog.json"))
+        let store = WorkStore(root: root)
+        XCTAssertEqual(store.vehicles.map(\.name), ["Hilux", "Ranger"])
+        XCTAssertEqual(store.currentVehicle?.name, "Hilux")
+        XCTAssertEqual(store.data.trips[1].vehicleID, store.vehicles[1].id)
+    }
+    @MainActor func testCurrentVehicleIsRememberedAfterReopening() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorkStore(root: root)
+        let hilux = Vehicle(name: "Hilux"), ranger = Vehicle(name: "Ranger", registration: "1XYZ987")
+        XCTAssertTrue(store.saveVehicle(hilux)); XCTAssertTrue(store.saveVehicle(ranger))
+        XCTAssertEqual(store.currentVehicle?.id, hilux.id)
+        XCTAssertTrue(store.selectVehicle(ranger.id))
+        XCTAssertEqual(WorkStore(root: root).currentVehicle?.id, ranger.id)
+    }
+    @MainActor func testOdometerCheckSpotsForgottenVehicleSwitch() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorkStore(root: root)
+        let hilux = Vehicle(name: "Hilux", startingOdometer: 54_200), ranger = Vehicle(name: "Ranger", startingOdometer: 128_390)
+        store.saveVehicle(hilux); store.saveVehicle(ranger)
+        var trip = Trip(purpose: "Work", vehicle: "Hilux", start: Date(), automatic: false, timeZoneID: "Australia/Perth")
+        trip.vehicleID = hilux.id; trip.odometerStart = 54_300; trip.odometerEnd = 54_320
+        store.data.trips = [trip]
+        XCTAssertNil(store.odometerCheck(reading: 54_335, vehicleID: hilux.id))
+        let wrongCar = try XCTUnwrap(store.odometerCheck(reading: 128_450, vehicleID: hilux.id))
+        XCTAssertEqual(wrongCar.suggested?.id, ranger.id)
+        let lower = try XCTUnwrap(store.odometerCheck(reading: 54_000, vehicleID: hilux.id))
+        XCTAssertNil(lower.suggested)
+        XCTAssertNil(store.odometerCheck(reading: 128_400, vehicleID: ranger.id))
+        XCTAssertThrowsError(try store.deleteVehicle(hilux.id))
+    }
     func testNoAssumedGSTOrTotal() {
         let result = ReceiptSuggestion.parse("SHOP\nBread $5.00\nSubtotal $5.00")
         XCTAssertEqual(result.gst, "")
