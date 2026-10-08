@@ -1,0 +1,3 @@
+# <file-name> <launch arguments>  (one screenshot per line, taken in dark mode at 9:41)
+1-home -DemoData -DemoTab 0
+2-second-tab -DemoData -DemoTab 1
