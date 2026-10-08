@@ -28,7 +28,7 @@ import UIKit
     @Published private(set) var message: String?
     private struct Preference: Codable { var enabled: Bool }
     private let preferenceFile: URL
-    private let makeAuthenticator: () -> OwnerAuthenticating
+    private let makeAuthenticator: @MainActor () -> OwnerAuthenticating
     private var authenticator: OwnerAuthenticating?
     private var attempt = UUID()
     private var inBackground = false
@@ -36,7 +36,7 @@ import UIKit
     var canShowRecords: Bool { !enabled || isUnlocked }
 
     init(preferenceFile: URL? = nil,
-         makeAuthenticator: @escaping () -> OwnerAuthenticating = { AppleOwnerAuthenticator() }) {
+         makeAuthenticator: @escaping @MainActor () -> OwnerAuthenticating = { AppleOwnerAuthenticator() }) {
         self.preferenceFile = preferenceFile ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("WorklogSecurity/app-lock.json")
         self.makeAuthenticator = makeAuthenticator
