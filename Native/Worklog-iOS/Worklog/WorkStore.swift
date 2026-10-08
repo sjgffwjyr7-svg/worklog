@@ -19,6 +19,35 @@ import Combine
         if !loadFailed { migrateVehicles() }
     }
 
+    // MARK: Home and work
+
+    @discardableResult func savePlace(_ place: Place?, home: Bool) -> Bool {
+        let previous = data
+        if home { data.home = place } else { data.workplace = place }
+        if save() { return true }
+        data = previous; return false
+    }
+    /// Flags trips that look like commuting (home ↔ work) or a break at home during work hours.
+    /// Only a suggestion: the driver confirms, and nothing is excluded automatically.
+    func placeAssessment(_ trip: Trip) -> PlaceAssessment? {
+        guard trip.excluded != true, trip.placeReviewed != true, let first = trip.points.first, let last = trip.points.last else { return nil }
+        let fromHome = data.home?.contains(first) == true, toHome = data.home?.contains(last) == true
+        let fromWork = data.workplace?.contains(first) == true, toWork = data.workplace?.contains(last) == true
+        let commute = "Normal travel between home and your usual workplace is usually private, not work travel. Check with your accountant."
+        if fromHome && toWork { return PlaceAssessment(kind: .commute, short: "Commute?", message: "Home to work. " + commute) }
+        guard toHome && !fromHome else { return nil }
+        let end = trip.end ?? last.date
+        var shiftCalendar = data.schedule
+        shiftCalendar.timeZoneID = trip.timeZoneID
+        if let shift = shiftCalendar.window(at: end), shift.end.timeIntervalSince(end) >= 30 * 60 {
+            let left = Int(shift.end.timeIntervalSince(end) / 60)
+            let remaining = left >= 60 ? "\(left / 60) h \(left % 60) min" : "\(left) min"
+            return PlaceAssessment(kind: .homeBreak, short: "Break?", message: "Ended at home with \(remaining) of your work hours left. If this was a meal or personal break, mark the trip private.")
+        }
+        if fromWork { return PlaceAssessment(kind: .commute, short: "Commute?", message: "Work to home. " + commute) }
+        return nil
+    }
+
     // MARK: Vehicles
 
     /// A reading more than this far past a vehicle's last reading is treated as implausible for it.
@@ -185,6 +214,7 @@ import Combine
         }
         if next.trips.isEmpty && next.invoices.isEmpty {
             next.currentVehicleID = backup.data.currentVehicleID ?? next.currentVehicleID
+            next.home = backup.data.home; next.workplace = backup.data.workplace
             next.schedule = backup.data.schedule
             next.schedule.enabled = false
             next.lastTripDescription = backup.data.lastTripDescription
@@ -238,9 +268,9 @@ import Combine
             let safe = value.first.map { "=+-@\t\r".contains($0) } == true ? "'" + value : value
             return "\"" + safe.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         }
-        var rows = [["Trip ID", "Purpose", "Vehicle", "Started UTC", "Finished UTC", "Time zone", "Work km in selected FY", "Full trip km", "GPS km", "Automatic", "Review", "Correction reason", "Odometer start km", "Odometer finish km", "Classification"]]
+        var rows = [["Trip ID", "Purpose", "Vehicle", "Started UTC", "Finished UTC", "Time zone", "Work km in selected FY", "Full trip km", "GPS km", "Automatic", "Review", "Correction reason", "Odometer start km", "Odometer finish km", "Classification", "Home/work check"]]
         for t in data.trips where (t.end ?? t.start) > interval.start && t.start < interval.end && (vehicle == nil || t.vehicleID == vehicle?.id) {
-            rows.append([t.id.uuidString, t.purpose, t.vehicle, formatter.string(from: t.start), t.end.map { formatter.string(from: $0) } ?? "", t.timeZoneID, String(format: "%.3f", t.km(in: interval)), String(format: "%.3f", t.km), String(format: "%.3f", t.metres / 1000), t.automatic ? "Yes" : "No", t.reviewReasons.joined(separator: "; "), t.correctionReason, t.odometerStart.map { String($0) } ?? "", t.odometerEnd.map { String($0) } ?? "", t.excluded == true ? "Personal / excluded" : "Work"])
+            rows.append([t.id.uuidString, t.purpose, t.vehicle, formatter.string(from: t.start), t.end.map { formatter.string(from: $0) } ?? "", t.timeZoneID, String(format: "%.3f", t.km(in: interval)), String(format: "%.3f", t.km), String(format: "%.3f", t.metres / 1000), t.automatic ? "Yes" : "No", t.reviewReasons.joined(separator: "; "), t.correctionReason, t.odometerStart.map { String($0) } ?? "", t.odometerEnd.map { String($0) } ?? "", t.excluded == true ? "Personal / excluded" : "Work", placeAssessment(t).map { "\($0.short) \($0.message)" } ?? (t.placeReviewed == true ? "Confirmed work by driver" : "")])
         }
         let csv = "\u{FEFF}" + rows.map { $0.map(cell).joined(separator: ",") }.joined(separator: "\r\n")
         let suffix = vehicle.map { "-" + $0.displayName.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }.joined(separator: "-") } ?? ""

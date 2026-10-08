@@ -64,6 +64,8 @@ enum DemoMode {
         let hilux = Vehicle(name: "Hilux", registration: "1ABC234", startingOdometer: 54_200)
         let ranger = Vehicle(name: "Ranger", registration: "1XYZ987", startingOdometer: 128_390)
         store.data.vehicles = [hilux, ranger]; store.data.currentVehicleID = hilux.id
+        store.data.home = Place(address: "12 Wheelers Lane, Dubbo, NSW, 2830", latitude: -32.2569, longitude: 148.6011)
+        store.data.workplace = Place(address: "Farm West depot, Narromine, NSW, 2821", latitude: -32.2333, longitude: 148.2400)
         store.data.trips = [trip("Supply pickup — Bunnings", daysAgo: 0.2, km: 18.4), trip("Site visit — Narromine farm", daysAgo: 1, km: 62.7, automatic: true),
                             trip("Customer visit — Smith & Co", daysAgo: 2, km: 34.1, review: true), trip("Workshop visit", daysAgo: 4, km: 12.9),
                             trip("Training — Dubbo TAFE", daysAgo: 6, km: 8.3)]

@@ -2,6 +2,7 @@ import SwiftUI
 import CoreLocation
 import VisionKit
 import UniformTypeIdentifiers
+import MapKit
 
 // MARK: - Theme
 
@@ -180,7 +181,7 @@ struct DashboardView: View {
     var trips: [Trip] { store.data.trips.filter { ($0.end ?? $0.start) > interval.start && $0.start < interval.end && (vehicleFilter == nil || $0.vehicleID == vehicleFilter) }.sorted { $0.start > $1.start } }
     var years: [Int] { Array(Set([year, FinancialYear.startYear(), FinancialYear.startYear()-1] + store.data.trips.map { FinancialYear.startYear(for: $0.start) } + store.data.invoices.map { FinancialYear.startYear(for: $0.date) })).sorted(by: >) }
     var totalKm: Double { trips.reduce(0) { $0 + $1.km(in: interval) } }
-    var reviewCount: Int { trips.filter { !$0.reviewReasons.isEmpty }.count }
+    var reviewCount: Int { trips.filter { !$0.reviewReasons.isEmpty || store.placeAssessment($0) != nil }.count }
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -339,7 +340,10 @@ struct DashboardView: View {
                 Text(trip.purpose).font(.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
                 (Text(trip.start, format: .dateTime.weekday(.abbreviated).day().month().hour().minute()) + Text(trip.vehicle.isEmpty ? "" : " · \(trip.vehicle)"))
                     .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
-                if !trip.reviewReasons.isEmpty { Label("Review GPS coverage", systemImage: "exclamationmark.triangle.fill").font(.caption2.weight(.semibold)).foregroundStyle(Theme.warning) }
+                HStack(spacing: 8) {
+                    if let check = store.placeAssessment(trip) { Label(check.short, systemImage: check.kind == .homeBreak ? "cup.and.saucer.fill" : "house.fill").font(.caption2.weight(.semibold)).foregroundStyle(Theme.warning) }
+                    if !trip.reviewReasons.isEmpty { Label("Review GPS", systemImage: "exclamationmark.triangle.fill").font(.caption2.weight(.semibold)).foregroundStyle(Theme.warning) }
+                }
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 2) {
@@ -429,6 +433,15 @@ struct TripDetailView: View {
                     LabeledContent("Recording", value: t.automatic ? "Scheduled" : "Manual")
                     LabeledContent("Time zone", value: t.timeZoneID)
                 } header: { Text("Work trip") }
+                if let check = store.placeAssessment(t) {
+                    Section {
+                        Label(check.message, systemImage: check.kind == .homeBreak ? "cup.and.saucer.fill" : "house.fill").foregroundStyle(Theme.warning)
+                        Button { excluded = true; update { $0.excluded = true; $0.placeReviewed = true } } label: { Label("Mark private", systemImage: "person.fill") }
+                            .buttonStyle(PrimaryButtonStyle()).buttonRow()
+                        Button { update { $0.placeReviewed = true } } label: { Label("It was work", systemImage: "briefcase.fill") }
+                            .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent)).buttonRow()
+                    } header: { Text(check.kind == .homeBreak ? "Break at home?" : "Commute?") }
+                }
                 if !t.reviewReasons.isEmpty { Section("Review needed") { ForEach(t.reviewReasons, id: \.self) { Label($0, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning) } } }
                 Section("Trip description") {
                     TripDescriptionField(purpose: $purpose).padding(.vertical, 6)
@@ -667,5 +680,125 @@ struct VehiclesSettingsSection: View {
         }
         .sheet(item: $editing) { VehicleEditorView(existing: $0) }
         .sheet(isPresented: $adding) { VehicleEditorView(existing: nil) }
+    }
+}
+
+// MARK: - Home and work
+
+struct PlacesSettingsSection: View {
+    @EnvironmentObject var store: WorkStore
+    @State private var editingHome: Bool?
+    var body: some View {
+        Section {
+            row(title: "Home", icon: "house.fill", place: store.data.home) { editingHome = true }
+            row(title: "Work", icon: "briefcase.fill", place: store.data.workplace) { editingHome = false }
+        } header: { Text("Home & work") } footer: {
+            Text("Trips between home and work are tagged Commute?, and trips ending at home during work hours are tagged Break?, so you can mark them private. Addresses stay on this iPhone.")
+        }
+        .sheet(item: Binding(get: { editingHome.map { PlaceKind(home: $0) } }, set: { editingHome = $0?.home })) { PlaceEditorView(home: $0.home) }
+    }
+    func row(title: String, icon: String, place: Place?, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: icon).foregroundStyle(Theme.accent)
+                    .frame(width: 38, height: 38).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.headline).foregroundStyle(Theme.textPrimary)
+                    Text(place?.address ?? "Not set — tap to add").font(.caption).foregroundStyle(place == nil ? Theme.textTertiary : Theme.textSecondary).lineLimit(2)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Theme.textTertiary)
+            }
+        }
+    }
+}
+
+struct PlaceKind: Identifiable { let home: Bool; var id: Bool { home } }
+
+struct PlaceEditorView: View {
+    let home: Bool
+    @EnvironmentObject var store: WorkStore
+    @EnvironmentObject var recorder: TripRecorder
+    @Environment(\.dismiss) private var dismiss
+    @State private var address = ""
+    @State private var found: Place?
+    @State private var radius = 250.0
+    @State private var busy = false
+    @State private var message: String?
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    ThemedTextField(label: home ? "Home address" : "Work address", prompt: "Street, town, state", text: $address, multiline: true)
+                    HStack(spacing: 12) {
+                        Button { Task { await lookUp() } } label: { Label("Find address", systemImage: "magnifyingglass") }
+                            .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent))
+                            .disabled(busy || address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Button { Task { await useCurrentLocation() } } label: { Label("I'm here now", systemImage: "location.fill") }
+                            .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent))
+                            .disabled(busy)
+                    }
+                    if busy { ProgressView().tint(Theme.accent).frame(maxWidth: .infinity) }
+                    if let found {
+                        let centre = CLLocationCoordinate2D(latitude: found.latitude, longitude: found.longitude)
+                        Map(initialPosition: .region(MKCoordinateRegion(center: centre, latitudinalMeters: radius * 6, longitudinalMeters: radius * 6))) {
+                            Marker(home ? "Home" : "Work", systemImage: home ? "house.fill" : "briefcase.fill", coordinate: centre).tint(Theme.accent)
+                            MapCircle(center: centre, radius: radius).foregroundStyle(Theme.accent.opacity(0.18)).stroke(Theme.accent, lineWidth: 1.5)
+                        }
+                        .id("\(found.latitude),\(found.longitude),\(radius)")
+                        .frame(height: 220)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        DropdownField(label: "Counts as \(home ? "home" : "work") within", selection: $radius, options: [100.0, 250.0, 500.0, 1000.0],
+                                      title: { $0 >= 1000 ? "1 km" : "\(Int($0)) m" })
+                    }
+                    if let message { Label(message, systemImage: "info.circle").font(.footnote).foregroundStyle(Theme.textSecondary) }
+                    Button { save() } label: { Label("Save \(home ? "home" : "work")", systemImage: "checkmark") }
+                        .buttonStyle(PrimaryButtonStyle()).disabled(found == nil)
+                        .opacity(found == nil ? 0.45 : 1)
+                    if (home ? store.data.home : store.data.workplace) != nil {
+                        Button(role: .destructive) { store.savePlace(nil, home: home); dismiss() } label: { Label("Remove", systemImage: "trash") }
+                            .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.danger))
+                    }
+                }.padding(20)
+            }
+            .background(Theme.background)
+            .navigationTitle(home ? "Home" : "Work").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .onAppear {
+                if let saved = home ? store.data.home : store.data.workplace { found = saved; address = saved.address; radius = saved.radius }
+            }
+        }
+        .presentationBackground(Theme.background)
+    }
+    func lookUp() async {
+        busy = true; message = nil; defer { busy = false }
+        do {
+            let marks = try await CLGeocoder().geocodeAddressString(address, in: nil, preferredLocale: Locale(identifier: "en_AU"))
+            guard let mark = marks.first, let location = mark.location else { message = "Address not found. Add the town and state."; return }
+            found = Place(address: format(mark) ?? address, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, radius: radius)
+            message = "Check the pin is in the right spot before saving."
+        } catch { message = "Address not found. Check the spelling, or use “I'm here now” when you're there." }
+    }
+    func useCurrentLocation() async {
+        guard let here = recorder.lastKnownLocation, here.horizontalAccuracy >= 0, here.horizontalAccuracy <= 100 else {
+            recorder.requestPermission()
+            message = "Your location isn't available yet. Allow location, wait a moment outside, then try again."; return
+        }
+        busy = true; defer { busy = false }
+        let mark = try? await CLGeocoder().reverseGeocodeLocation(here).first
+        let text = mark.flatMap(format) ?? String(format: "%.5f, %.5f", here.coordinate.latitude, here.coordinate.longitude)
+        address = text
+        found = Place(address: text, latitude: here.coordinate.latitude, longitude: here.coordinate.longitude, radius: radius)
+        message = "Using where you are now (±\(Int(here.horizontalAccuracy)) m)."
+    }
+    func format(_ mark: CLPlacemark) -> String? {
+        let street = [mark.subThoroughfare, mark.thoroughfare].compactMap { $0 }.joined(separator: " ")
+        let parts = [street, mark.locality, mark.administrativeArea, mark.postalCode].compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
+    func save() {
+        guard var place = found else { return }
+        place.radius = radius
+        if store.savePlace(place, home: home) { dismiss() } else { message = "Not saved. Check device storage." }
     }
 }

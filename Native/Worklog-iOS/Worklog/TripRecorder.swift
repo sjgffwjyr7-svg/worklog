@@ -37,6 +37,8 @@ import Combine
         }
     }
     func requestPermission() { location.requestWhenInUseAuthorization() }
+    /// Most recent fix iOS has for this app, if any; used to set home/work from where you are.
+    var lastKnownLocation: CLLocation? { location.location }
     func requestAlways() {
         if authorization == .notDetermined { location.requestWhenInUseAuthorization() }
         else { location.requestAlwaysAuthorization() }

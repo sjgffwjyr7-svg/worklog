@@ -257,6 +257,30 @@ final class ReceiptTests: XCTestCase {
         XCTAssertNil(store.odometerCheck(reading: 128_400, vehicleID: ranger.id))
         XCTAssertThrowsError(try store.deleteVehicle(hilux.id))
     }
+    @MainActor func testHomeAndWorkChecksFlagCommuteAndBreak() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorkStore(root: root)
+        store.data.home = Place(address: "Home", latitude: -32.250, longitude: 148.600)
+        store.data.workplace = Place(address: "Depot", latitude: -32.240, longitude: 148.630)
+        func point(_ lat: Double, _ lon: Double, _ date: Date) -> GPSPoint {
+            var p = GPSPoint(CLLocation(latitude: lat, longitude: lon)); p.date = date; p.accuracy = 10; return p
+        }
+        func trip(from: (Double, Double), to: (Double, Double), endingAt end: Date) -> Trip {
+            var t = Trip(purpose: "Drive", vehicle: "", start: end.addingTimeInterval(-900), automatic: false, timeZoneID: "Australia/Perth")
+            t.end = end; t.points = [point(from.0, from.1, t.start), point(to.0, to.1, end)]; return t
+        }
+        let home = (-32.250, 148.600), work = (-32.240, 148.630), client = (-32.300, 148.700)
+        // Monday 14 Sep 2026, schedule Mon–Fri 07:00–17:00 Perth.
+        let morning = iso.date(from: "2026-09-14T07:20:00+08:00")!, noon = iso.date(from: "2026-09-14T12:10:00+08:00")!, evening = iso.date(from: "2026-09-14T17:20:00+08:00")!
+        XCTAssertEqual(store.placeAssessment(trip(from: home, to: work, endingAt: morning))?.kind, .commute)
+        XCTAssertEqual(store.placeAssessment(trip(from: work, to: home, endingAt: noon))?.kind, .homeBreak)
+        XCTAssertEqual(store.placeAssessment(trip(from: client, to: home, endingAt: noon))?.kind, .homeBreak)
+        XCTAssertEqual(store.placeAssessment(trip(from: work, to: home, endingAt: evening))?.kind, .commute)
+        XCTAssertNil(store.placeAssessment(trip(from: work, to: client, endingAt: noon)))
+        var confirmed = trip(from: work, to: home, endingAt: noon); confirmed.placeReviewed = true
+        XCTAssertNil(store.placeAssessment(confirmed))
+    }
     func testNoAssumedGSTOrTotal() {
         let result = ReceiptSuggestion.parse("SHOP\nBread $5.00\nSubtotal $5.00")
         XCTAssertEqual(result.gst, "")

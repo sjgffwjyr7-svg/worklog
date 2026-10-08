@@ -62,6 +62,8 @@ struct Trip: Codable, Identifiable {
     var correctionReason = ""
     var correctedAt: Date? = nil
     var vehicleID: UUID? = nil
+    /// Set once the driver has answered the home/work check for this trip.
+    var placeReviewed: Bool? = nil
     var metres: Double { points.reduce(0) { $0 + $1.segmentMetres } }
     var km: Double { correctedKm ?? metres / 1000 }
     mutating func review(_ reason: String) { if !reviewReasons.contains(reason) { reviewReasons.append(reason) } }
@@ -111,6 +113,24 @@ struct Vehicle: Codable, Identifiable, Hashable {
     var displayName: String { registration.isEmpty ? name : "\(name) · \(registration)" }
 }
 
+/// A saved home or work location used to spot commuting and breaks at home.
+struct Place: Codable, Equatable {
+    var address: String
+    var latitude: Double
+    var longitude: Double
+    var radius: Double = 250
+    func contains(_ point: GPSPoint) -> Bool {
+        CLLocation(latitude: latitude, longitude: longitude).distance(from: point.location) <= radius + min(point.accuracy, 100)
+    }
+}
+
+struct PlaceAssessment: Equatable {
+    enum Kind { case commute, homeBreak }
+    var kind: Kind
+    var short: String
+    var message: String
+}
+
 /// Result of comparing an entered odometer with each vehicle's last known reading.
 struct OdometerCheck {
     var selected: Vehicle?
@@ -121,6 +141,8 @@ struct OdometerCheck {
 }
 
 struct WorkData: Codable {
+    var home: Place? = nil
+    var workplace: Place? = nil
     var vehicles: [Vehicle]? = nil
     var currentVehicleID: UUID? = nil
     var lastTripDescription: String? = nil
