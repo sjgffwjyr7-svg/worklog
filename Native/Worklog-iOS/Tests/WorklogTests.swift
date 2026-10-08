@@ -272,6 +272,7 @@ final class ReceiptTests: XCTestCase {
         }
         let home = (-32.250, 148.600), work = (-32.240, 148.630), client = (-32.300, 148.700)
         // Monday 14 Sep 2026, schedule Mon–Fri 07:00–17:00 Perth.
+        let iso = ISO8601DateFormatter()
         let morning = iso.date(from: "2026-09-14T07:20:00+08:00")!, noon = iso.date(from: "2026-09-14T12:10:00+08:00")!, evening = iso.date(from: "2026-09-14T17:20:00+08:00")!
         XCTAssertEqual(store.placeAssessment(trip(from: home, to: work, endingAt: morning))?.kind, .commute)
         XCTAssertEqual(store.placeAssessment(trip(from: work, to: home, endingAt: noon))?.kind, .homeBreak)
