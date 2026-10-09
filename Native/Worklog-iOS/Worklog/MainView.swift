@@ -847,7 +847,7 @@ struct LogFolderRow: View {
                 Text(title).font(.headline).foregroundStyle(count == 0 ? Theme.textTertiary : Theme.textPrimary).lineLimit(1)
                 Text(subtitle).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
                 if let highlight { StatChip(icon: "star.fill", text: highlight, color: Theme.mint).padding(.top, 2) }
-            }
+            }.layoutPriority(1)
             Spacer(minLength: 8)
             if count > 0 {
                 VStack(alignment: .trailing, spacing: 2) {
