@@ -99,14 +99,22 @@ struct ThemedTextField: View {
     @Binding var text: String
     var keyboard: UIKeyboardType = .default
     var multiline = false
+    var secure = false
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             FieldLabel(label)
-            TextField("", text: $text, prompt: Text(prompt).foregroundStyle(Theme.textTertiary), axis: multiline ? .vertical : .horizontal)
-                .keyboardType(keyboard)
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(multiline ? 2...5 : 1...1)
-                .modifier(FieldBox())
+            if secure {
+                SecureField("", text: $text, prompt: Text(prompt).foregroundStyle(Theme.textTertiary))
+                    .textContentType(.password)
+                    .foregroundStyle(Theme.textPrimary)
+                    .modifier(FieldBox())
+            } else {
+                TextField("", text: $text, prompt: Text(prompt).foregroundStyle(Theme.textTertiary), axis: multiline ? .vertical : .horizontal)
+                    .keyboardType(keyboard)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(multiline ? 2...5 : 1...1)
+                    .modifier(FieldBox())
+            }
         }
     }
 }

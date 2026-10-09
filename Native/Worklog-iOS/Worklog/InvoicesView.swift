@@ -271,6 +271,7 @@ struct StorageView: View {
     @State private var importing = false
     @State private var notice = ""
     @State private var exportYear = FinancialYear.startYear()
+    @State private var backupPassword: BackupPasswordView.Mode?
     var thisYearKm: Double {
         let tz = store.data.schedule.timeZoneID
         let span = FinancialYear.interval(FinancialYear.startYear(for: Date(), timeZone: tz), timeZone: tz)
@@ -309,10 +310,10 @@ struct StorageView: View {
                 Section("On this iPhone") {
                     LabeledContent("Work trips", value: "\(store.data.trips.count)")
                     LabeledContent("Invoices", value: "\(store.data.invoices.count)")
-                    Text("Records and scanned PDFs live on this iPhone. GPS works without mobile data. No records expire automatically. Keep dated backups on your QNAP and another device for the period your accountant requires. Deleting the app removes local records.").font(.subheadline)
+                    Text("Records and scanned receipts are kept in Worklog's private, encrypted storage on this iPhone. They can't be browsed from the Files app or a computer. No records expire automatically. Keep dated encrypted backups on your QNAP and another device for the period your accountant requires. Deleting the app removes local records.").font(.subheadline)
                 }
                 Section {
-                    Button { do { share = ShareFiles(urls: [try store.exportBackup()]) } catch { store.error = error.localizedDescription } } label: { Label("Save full backup", systemImage: "externaldrive.fill.badge.checkmark") }
+                    Button { backupPassword = .create } label: { Label("Save encrypted backup", systemImage: "lock.doc.fill") }
                         .buttonStyle(PrimaryButtonStyle()).buttonRow()
                     Button { importing = true } label: { Label("Restore an iOS backup", systemImage: "arrow.counterclockwise") }
                         .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent)).buttonRow()
@@ -335,8 +336,66 @@ struct StorageView: View {
                 if !notice.isEmpty { Label(notice, systemImage: "checkmark.circle.fill").foregroundStyle(Theme.mint) }
             }.themedForm().navigationTitle("Settings").sheet(item: $share) { ShareSheet(urls: $0.urls) }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
-                do { try store.restoreBackup(result.get()); notice = "Missing records restored. Existing records were kept." } catch { store.error = error.localizedDescription }
+                do {
+                    let url = try result.get()
+                    do { try store.restoreBackup(url); notice = "Missing records restored. Existing records were kept." }
+                    catch StoreError.passwordNeeded {
+                        // Let the file picker finish closing before showing the password sheet.
+                        Task { try? await Task.sleep(for: .milliseconds(500)); backupPassword = .unlock(url) }
+                    }
+                } catch { store.error = error.localizedDescription }
+            }
+            .sheet(item: $backupPassword) { mode in
+                BackupPasswordView(mode: mode) { password in
+                    switch mode {
+                    case .create: share = ShareFiles(urls: [try store.exportBackup(password: password)])
+                    case .unlock(let url): try store.restoreBackup(url, password: password); notice = "Missing records restored. Existing records were kept."
+                    }
+                }
             }
         }
+    }
+}
+
+/// Asks for the password that encrypts a new backup, or that opens an encrypted one.
+struct BackupPasswordView: View {
+    enum Mode: Identifiable {
+        case create
+        case unlock(URL)
+        var id: String { if case .unlock(let url) = self { return url.absoluteString }; return "create" }
+    }
+    let mode: Mode
+    let action: (String) throws -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var password = ""
+    @State private var confirm = ""
+    @State private var error: String?
+    var creating: Bool { if case .create = mode { return true }; return false }
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Label(creating ? "Your backup is encrypted with this password (AES-256). Store it somewhere safe: without it the backup can't be opened, and Worklog can't recover it."
+                                   : "This backup is encrypted. Enter the password you set when you saved it.",
+                          systemImage: "lock.shield.fill")
+                        .font(.subheadline).foregroundStyle(Theme.textSecondary)
+                    ThemedTextField(label: "Backup password", prompt: creating ? "At least 8 characters" : "Password", text: $password, secure: true)
+                    if creating { ThemedTextField(label: "Confirm password", prompt: "Type it again", text: $confirm, secure: true) }
+                    if let error { Label(error, systemImage: "exclamationmark.circle.fill").font(.subheadline).foregroundStyle(Theme.warning) }
+                    Button {
+                        if creating && password.count < 8 { error = "Use at least 8 characters."; return }
+                        if creating && password != confirm { error = "The passwords don't match."; return }
+                        do { try action(password); dismiss() } catch { self.error = error.localizedDescription }
+                    } label: { Label(creating ? "Encrypt and save" : "Restore backup", systemImage: creating ? "lock.fill" : "lock.open.fill") }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(password.isEmpty)
+                }.padding(20)
+            }
+            .background(Theme.background)
+            .navigationTitle(creating ? "Encrypted backup" : "Open backup").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationBackground(Theme.background)
     }
 }

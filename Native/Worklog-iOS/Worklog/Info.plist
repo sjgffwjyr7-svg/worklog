@@ -18,8 +18,6 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Worklog uses the camera to scan tax invoices and save them on this iPhone.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
@@ -35,8 +33,6 @@
 	<array>
 		<string>location</string>
 	</array>
-	<key>UIFileSharingEnabled</key>
-	<true/>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

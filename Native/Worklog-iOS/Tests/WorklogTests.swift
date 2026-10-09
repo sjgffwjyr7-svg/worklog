@@ -358,6 +358,35 @@ final class ReceiptTests: XCTestCase {
         XCTAssertFalse(store.reopenTrip(older.id, at: now))
         XCTAssertEqual(WorkStore(root: root).data.active?.id, pickup.id, "Saved immediately")
     }
+    @MainActor func testEncryptedBackupNeedsTheRightPassword() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let source = WorkStore(root: base.appendingPathComponent("source"))
+        source.data.trips = [Trip(purpose: "Secret supplier run", vehicle: "", start: Date().addingTimeInterval(-600), end: Date(), automatic: false, timeZoneID: "Australia/Perth")]
+        XCTAssertTrue(source.save())
+        XCTAssertThrowsError(try source.exportBackup(password: "short"))
+        let backup = try source.exportBackup(password: "correct horse 42")
+        let bytes = try Data(contentsOf: backup)
+        XCTAssertNil(String(data: bytes, encoding: .utf8)?.range(of: "Secret supplier run"), "Trip details must not be readable in the file")
+        XCTAssertTrue(BackupCrypto.isEncrypted(bytes))
+        let target = WorkStore(root: base.appendingPathComponent("target"))
+        XCTAssertThrowsError(try target.restoreBackup(backup)) { XCTAssertEqual($0 as? StoreError, .passwordNeeded) }
+        XCTAssertThrowsError(try target.restoreBackup(backup, password: "wrong password")) { XCTAssertEqual($0 as? StoreError, .wrongPassword) }
+        XCTAssertTrue(target.data.trips.isEmpty)
+        try target.restoreBackup(backup, password: "correct horse 42")
+        XCTAssertEqual(target.data.trips.first?.purpose, "Secret supplier run")
+    }
+    func testOldFilesAppFolderMovesToPrivateStorage() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let legacy = base.appendingPathComponent("Documents/Worklog"), secure = base.appendingPathComponent("Library/Application Support/Worklog")
+        try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: legacy.appendingPathComponent("worklog.json"))
+        XCTAssertEqual(WorkStore.moveLegacyStorage(from: legacy, to: secure), secure)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: secure.appendingPathComponent("worklog.json").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: legacy.path))
+        XCTAssertEqual(WorkStore.moveLegacyStorage(from: legacy, to: secure), secure, "Second launch keeps the private folder")
+    }
     @MainActor func testDeletingTripAndReceiptIsPermanent() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

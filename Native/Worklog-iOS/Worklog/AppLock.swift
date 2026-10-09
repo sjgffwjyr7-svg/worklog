@@ -113,7 +113,7 @@ import UIKit
         cover.windowLevel = UIWindow.Level(rawValue: UIWindow.Level.alert.rawValue + 1)
         let controller = UIViewController()
         controller.view.backgroundColor = .systemBackground
-        let label = UILabel(); label.text = "Worklog · Locked"
+        let label = UILabel(); label.text = "Worklog"
         label.textAlignment = .center; label.font = .preferredFont(forTextStyle: .title2)
         label.translatesAutoresizingMaskIntoConstraints = false
         controller.view.addSubview(label)
@@ -155,11 +155,12 @@ struct WorklogGate: View {
             case .active:
                 lock.becameActive(); shield.hide()
                 Task { await lock.autoUnlockIfNeeded() }
-            case .inactive: if lock.enabled { shield.show() }
+            // Always cover the screen for the app switcher, even without app lock.
+            case .inactive: shield.show()
             case .background:
-                if lock.enabled { shield.show() }
+                shield.show()
                 lock.enteredBackground()
-            @unknown default: if lock.enabled { shield.show(); lock.enteredBackground() }
+            @unknown default: shield.show(); lock.enteredBackground()
             }
         }
     }
@@ -173,6 +174,13 @@ struct AppLockSettings: View {
                 Task { await lock.setEnabled(value) }
             })).disabled(lock.busy)
             if lock.enabled { Button("Lock Worklog now") { lock.lockNow() } }
+            else {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "exclamationmark.shield.fill").foregroundStyle(Theme.warning)
+                    Text("App lock is off. Anyone holding your unlocked iPhone can open your trips and receipts. Turn on Face ID above.")
+                        .font(.footnote).foregroundStyle(Theme.warning)
+                }
+            }
             if lock.busy { ProgressView("Authenticating…") }
             if let message = lock.message { Text(message).font(.footnote).foregroundStyle(.secondary) }
         } header: { Text("App security") } footer: {

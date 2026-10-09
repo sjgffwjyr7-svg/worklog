@@ -1,5 +1,8 @@
 import Foundation
 import Combine
+import CryptoKit
+import CommonCrypto
+import Security
 
 @MainActor final class WorkStore: ObservableObject {
     @Published var data = WorkData()
@@ -8,7 +11,8 @@ import Combine
     let root: URL
     var file: URL { root.appendingPathComponent("worklog.json") }
     init(root directory: URL? = nil) {
-        root = directory ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Worklog", isDirectory: true)
+        root = directory ?? Self.privateRoot()
+        if directory == nil { Self.clearExports() }
         do {
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             if FileManager.default.fileExists(atPath: file.path) {
@@ -16,7 +20,47 @@ import Combine
                 guard data.schemaVersion == 1 else { throw StoreError.invalidBackup }
             }
         } catch { loadFailed = true; self.error = "Could not open your saved records. Nothing has been overwritten. \(error.localizedDescription)" }
-        if !loadFailed { migrateVehicles() }
+        if !loadFailed { migrateVehicles(); protectReceiptFiles() }
+    }
+
+    // MARK: Security
+
+    /// Records live in Application Support, which the Files app and computer file sharing can't browse,
+    /// so they can only be reached through Worklog (and its Face ID lock). Older versions used Documents.
+    static func privateRoot() -> URL {
+        let fm = FileManager.default
+        let legacy = fm.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Worklog", isDirectory: true)
+        let secure = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Worklog", isDirectory: true)
+        return moveLegacyStorage(from: legacy, to: secure)
+    }
+    /// Moves the old Files-visible folder into private storage once. If the move can't happen yet
+    /// (for example the phone is locked), keeps using the old folder so no records are split or lost.
+    static func moveLegacyStorage(from legacy: URL, to secure: URL) -> URL {
+        let fm = FileManager.default
+        if fm.fileExists(atPath: secure.path) || !fm.fileExists(atPath: legacy.path) { return secure }
+        do {
+            try fm.createDirectory(at: secure.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fm.moveItem(at: legacy, to: secure)
+            return secure
+        } catch { return legacy }
+    }
+    /// Receipts are only opened while the phone is unlocked, so they get iOS's strongest protection:
+    /// encrypted and unreadable whenever the iPhone is locked. The trip database stays readable after
+    /// first unlock because background GPS must save trips while the phone is locked.
+    static let receiptProtection: Data.WritingOptions = .completeFileProtection
+    private func protectReceiptFiles() {
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return }
+        for file in files where file.lastPathComponent != "worklog.json" && ["pdf", "json"].contains(file.pathExtension.lowercased()) {
+            try? fm.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: file.path)
+        }
+    }
+    /// Exports and backups are written here and cleared every time Worklog starts.
+    static var exportFolder: URL { FileManager.default.temporaryDirectory.appendingPathComponent("WorklogExports", isDirectory: true) }
+    static func clearExports() { try? FileManager.default.removeItem(at: exportFolder) }
+    private func exportURL(_ name: String) throws -> URL {
+        try FileManager.default.createDirectory(at: Self.exportFolder, withIntermediateDirectories: true)
+        return Self.exportFolder.appendingPathComponent(name)
     }
 
     // MARK: Continuing a trip
@@ -214,8 +258,8 @@ import Combine
     func saveInvoice(_ invoice: Invoice, pdf: Data) throws {
         guard !loadFailed else { throw StoreError.unavailable }
         let url = pdfURL(invoice)
-        try pdf.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-        do { try receiptBytes(invoice).write(to: receiptURL(invoice), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
+        try pdf.write(to: url, options: [.atomic, Self.receiptProtection])
+        do { try receiptBytes(invoice).write(to: receiptURL(invoice), options: [.atomic, Self.receiptProtection]) }
         catch { try? FileManager.default.removeItem(at: url); throw error }
         let previous = data.invoices
         let replaced = data.invoices.first(where: { $0.id == invoice.id })
@@ -233,21 +277,33 @@ import Combine
             try? FileManager.default.removeItem(at: receiptURL(replaced))
         }
     }
-    func exportBackup() throws -> URL {
+    /// Full backup including receipt PDFs. With a password the file is encrypted (AES-256-GCM, key from
+    /// PBKDF2-SHA256); without one it is plain JSON (kept for older backups and tests).
+    func exportBackup(password: String? = nil) throws -> URL {
         guard data.active == nil else { throw StoreError.activeTrip }
         var documents: [String: Data] = [:]
         for invoice in data.invoices { documents[invoice.pdfFilename] = try Data(contentsOf: pdfURL(invoice)) }
         let backup = Backup(data: data, documents: documents)
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("Worklog-backup-\(UUID().uuidString).json")
-        try JSONEncoder().encode(backup).write(to: url, options: .atomic)
+        var bytes = try JSONEncoder().encode(backup)
+        let stamp = ISO8601DateFormatter().string(from: Date()).prefix(10)
+        if let password {
+            guard password.count >= 8 else { throw StoreError.weakPassword }
+            bytes = try BackupCrypto.seal(bytes, password: password)
+        }
+        let url = try exportURL("Worklog-backup-\(stamp)\(password == nil ? "" : "-encrypted").json")
+        try bytes.write(to: url, options: [.atomic, .completeFileProtection])
         return url
     }
-    func restoreBackup(_ url: URL) throws {
+    func restoreBackup(_ url: URL, password: String? = nil) throws {
         guard !loadFailed else { throw StoreError.unavailable }
         guard data.active == nil else { throw StoreError.activeTrip }
         let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
-        let bytes = try Data(contentsOf: url)
+        var bytes = try Data(contentsOf: url)
         guard bytes.count < 250 * 1024 * 1024 else { throw StoreError.tooLarge }
+        if BackupCrypto.isEncrypted(bytes) {
+            guard let password, !password.isEmpty else { throw StoreError.passwordNeeded }
+            bytes = try BackupCrypto.open(bytes, password: password)
+        }
         let backup = try JSONDecoder().decode(Backup.self, from: bytes)
         guard backup.format == "worklog-ios-backup", backup.version == 1, backup.data.schemaVersion == 1, backup.data.active == nil else { throw StoreError.invalidBackup }
         let restoredSchedule = backup.data.schedule
@@ -278,7 +334,7 @@ import Combine
             invoice.pdfFilename = "invoice-\(invoice.id.uuidString)-\(UUID().uuidString).pdf"
             pending.append((pdfURL(invoice), pdf)); pending.append((receiptURL(invoice), try receiptBytes(invoice))); next.invoices.append(invoice)
         }
-        for (destination, content) in pending { try content.write(to: destination, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
+        for (destination, content) in pending { try content.write(to: destination, options: [.atomic, Self.receiptProtection]) }
         let previous = data; data = next
         if !save() { data = previous; throw StoreError.unavailable }
     }
@@ -293,16 +349,16 @@ import Combine
         var rows = [["Invoice ID", "Supplier", "ABN", "Invoice number", "Invoice date UTC", "Total AUD", "GST AUD", "Category", "Custom category", "Work use percent (unverified)", "Reimbursed AUD", "Accountant review status", "Notes", "Original PDF", "Captured UTC", "Items purchased", "Receipt checked"]]
         for i in receipts { rows.append([i.id.uuidString, i.supplier, i.abn ?? "", i.number, formatter.string(from: i.date), i.total, i.gst, i.category ?? "Other", i.customCategory ?? "", i.workPercent ?? "", i.reimbursed ?? "", i.taxStatus ?? "Needs accountant review", i.notes, i.pdfFilename, formatter.string(from: i.captured), i.items ?? "", i.receiptReviewed == true ? "Yes" : "No"]) }
         let csv = "\u{FEFF}" + rows.map { $0.map(cell).joined(separator: ",") }.joined(separator: "\r\n")
-        let register = FileManager.default.temporaryDirectory.appendingPathComponent("Worklog-invoices-FY-\(year).csv")
-        try Data(csv.utf8).write(to: register, options: .atomic)
+        let register = try exportURL("Worklog-invoices-FY-\(year).csv")
+        try Data(csv.utf8).write(to: register, options: [.atomic, .completeFileProtection])
         let perVehicle = vehicles.map { v in "\(v.displayName): \(String(format: "%.1f", data.trips.filter { $0.vehicleID == v.id }.reduce(0) { $0 + $1.km(in: interval) })) km" }.joined(separator: "; ")
         let summary = "Worklog accountant export: 1 July \(year) to 30 June \(year+1). Work kilometres: \(data.trips.reduce(0) { $0 + $1.km(in: interval) }).\(perVehicle.isEmpty ? "" : " By vehicle: \(perVehicle).") Invoice categories, amounts and business-use proportions are user-entered and require review. Original PDFs are included. GPS work trips alone are not a complete ATO logbook. Retain other required odometer, total-use and expense evidence. No automatic deletion applies. Keep independent backups for the required retention period."
-        let note = FileManager.default.temporaryDirectory.appendingPathComponent("Worklog-accountant-notes-FY-\(year).txt")
-        try Data(summary.utf8).write(to: note, options: .atomic)
+        let note = try exportURL("Worklog-accountant-notes-FY-\(year).txt")
+        try Data(summary.utf8).write(to: note, options: [.atomic, .completeFileProtection])
         var transactionFiles: [URL] = []
         for invoice in receipts {
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("receipt-\(invoice.id.uuidString).json")
-            try receiptBytes(invoice).write(to: url, options: .atomic); transactionFiles.append(url)
+            let url = try exportURL("receipt-\(invoice.id.uuidString).json")
+            try receiptBytes(invoice).write(to: url, options: [.atomic, .completeFileProtection]); transactionFiles.append(url)
         }
         let vehicleLogs = vehicles.count > 1 ? try vehicles.filter { v in data.trips.contains { $0.vehicleID == v.id } }.map { try csvExport(year: year, vehicle: $0) } : []
         return [try csvExport(year: year), register, note] + vehicleLogs + receipts.map { pdfURL($0) } + transactionFiles
@@ -321,12 +377,12 @@ import Combine
         }
         let csv = "\u{FEFF}" + rows.map { $0.map(cell).joined(separator: ",") }.joined(separator: "\r\n")
         let suffix = vehicle.map { "-" + $0.displayName.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }.joined(separator: "-") } ?? ""
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("Worklog-FY-\(year)-\(year+1)\(suffix).csv")
-        try Data(csv.utf8).write(to: url, options: .atomic); return url
+        let url = try exportURL("Worklog-FY-\(year)-\(year+1)\(suffix).csv")
+        try Data(csv.utf8).write(to: url, options: [.atomic, .completeFileProtection]); return url
     }
 }
 enum StoreError: LocalizedError {
-    case invalidBackup, unavailable, activeTrip, tooLarge, vehicleInUse
+    case invalidBackup, unavailable, activeTrip, tooLarge, vehicleInUse, passwordNeeded, wrongPassword, weakPassword
     var errorDescription: String? {
         switch self {
         case .invalidBackup: return "This is not a valid Worklog iOS backup."
@@ -334,6 +390,54 @@ enum StoreError: LocalizedError {
         case .activeTrip: return "Finish the current trip before backing up or restoring."
         case .tooLarge: return "This backup is too large to restore in memory."
         case .vehicleInUse: return "This vehicle has saved trips, so it can't be deleted. Rename it instead."
+        case .passwordNeeded: return "This backup is encrypted. Enter its password to restore it."
+        case .wrongPassword: return "That password doesn't open this backup. Nothing was restored."
+        case .weakPassword: return "Use a backup password of at least 8 characters."
         }
+    }
+}
+
+/// Password-encrypted backups: AES-256-GCM with a key derived by PBKDF2-HMAC-SHA256 and a random salt.
+/// The password is never stored; a lost password means the backup can't be opened.
+enum BackupCrypto {
+    static let format = "worklog-ios-backup-encrypted"
+    static let rounds: UInt32 = 310_000
+    struct Envelope: Codable {
+        var format = BackupCrypto.format
+        var version = 1
+        var kdf = "PBKDF2-HMAC-SHA256"
+        var rounds: UInt32
+        var salt: Data
+        var sealed: Data
+    }
+    static func key(_ password: String, salt: Data, rounds: UInt32) throws -> SymmetricKey {
+        var derived = Data(count: 32)
+        let length = password.utf8.count
+        let status = derived.withUnsafeMutableBytes { out in
+            salt.withUnsafeBytes { saltBytes in
+                CCKeyDerivationPBKDF(CCPBKDFAlgorithm(kCCPBKDF2), password, length,
+                                     saltBytes.bindMemory(to: UInt8.self).baseAddress, salt.count,
+                                     CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256), rounds,
+                                     out.bindMemory(to: UInt8.self).baseAddress, 32)
+            }
+        }
+        guard status == kCCSuccess else { throw StoreError.invalidBackup }
+        return SymmetricKey(data: derived)
+    }
+    static func seal(_ plain: Data, password: String) throws -> Data {
+        var salt = Data(count: 16)
+        let ok = salt.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 16, $0.baseAddress!) }
+        guard ok == errSecSuccess else { throw StoreError.unavailable }
+        guard let combined = try AES.GCM.seal(plain, using: key(password, salt: salt, rounds: rounds)).combined else { throw StoreError.unavailable }
+        return try JSONEncoder().encode(Envelope(rounds: rounds, salt: salt, sealed: combined))
+    }
+    static func isEncrypted(_ bytes: Data) -> Bool {
+        (try? JSONDecoder().decode(Envelope.self, from: bytes))?.format == format
+    }
+    static func open(_ bytes: Data, password: String) throws -> Data {
+        let envelope = try JSONDecoder().decode(Envelope.self, from: bytes)
+        guard envelope.format == format, envelope.version == 1, (100_000...5_000_000).contains(envelope.rounds), envelope.salt.count >= 16 else { throw StoreError.invalidBackup }
+        do { return try AES.GCM.open(AES.GCM.SealedBox(combined: envelope.sealed), using: key(password, salt: envelope.salt, rounds: envelope.rounds)) }
+        catch { throw StoreError.wrongPassword }
     }
 }
