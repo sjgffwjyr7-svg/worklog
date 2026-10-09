@@ -376,7 +376,7 @@ final class ReceiptTests: XCTestCase {
         try target.restoreBackup(backup, password: "correct horse 42")
         XCTAssertEqual(target.data.trips.first?.purpose, "Secret supplier run")
     }
-    func testOldFilesAppFolderMovesToPrivateStorage() throws {
+    @MainActor func testOldFilesAppFolderMovesToPrivateStorage() throws {
         let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: base) }
         let legacy = base.appendingPathComponent("Documents/Worklog"), secure = base.appendingPathComponent("Library/Application Support/Worklog")
