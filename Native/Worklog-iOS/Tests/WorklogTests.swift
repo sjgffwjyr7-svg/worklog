@@ -282,6 +282,23 @@ final class ReceiptTests: XCTestCase {
         var confirmed = trip(from: work, to: home, endingAt: noon); confirmed.placeReviewed = true
         XCTAssertNil(store.placeAssessment(confirmed))
     }
+    @MainActor func testDeletingTripAndReceiptIsPermanent() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorkStore(root: root)
+        let keep = Trip(purpose: "Keep", vehicle: "", start: Date(), automatic: false, timeZoneID: "Australia/Perth")
+        let remove = Trip(purpose: "Remove", vehicle: "", start: Date(), automatic: false, timeZoneID: "Australia/Perth")
+        store.data.trips = [keep, remove]; XCTAssertTrue(store.save())
+        let invoice = Invoice(supplier: "Shop", number: "1", date: Date(), total: "10.00", gst: "", notes: "", pdfFilename: "receipt-delete.pdf")
+        try store.saveInvoice(invoice, pdf: Data("%PDF-delete".utf8))
+        try store.deleteTrip(remove.id)
+        try store.deleteInvoice(invoice.id)
+        let reopened = WorkStore(root: root)
+        XCTAssertEqual(reopened.data.trips.map(\.id), [keep.id])
+        XCTAssertTrue(reopened.data.invoices.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.pdfURL(invoice).path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.receiptURL(invoice).path))
+    }
     func testNoAssumedGSTOrTotal() {
         let result = ReceiptSuggestion.parse("SHOP\nBread $5.00\nSubtotal $5.00")
         XCTAssertEqual(result.gst, "")

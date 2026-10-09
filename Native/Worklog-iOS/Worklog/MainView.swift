@@ -177,6 +177,7 @@ struct DashboardView: View {
     @State private var addingVehicle = false
     @State private var addingVehicleFromStart = false
     @State private var odometerWarning: OdometerCheck?
+    @State private var pendingDelete: Trip?
     var interval: DateInterval { FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID) }
     var trips: [Trip] { store.data.trips.filter { ($0.end ?? $0.start) > interval.start && $0.start < interval.end && (vehicleFilter == nil || $0.vehicleID == vehicleFilter) }.sorted { $0.start > $1.start } }
     var years: [Int] { Array(Set([year, FinancialYear.startYear(), FinancialYear.startYear()-1] + store.data.trips.map { FinancialYear.startYear(for: $0.start) } + store.data.invoices.map { FinancialYear.startYear(for: $0.date) })).sorted(by: >) }
@@ -243,7 +244,10 @@ struct DashboardView: View {
                     } else {
                         LazyVStack(spacing: 10) {
                             ForEach(trips) { trip in
-                                NavigationLink { TripDetailView(tripID: trip.id) } label: { tripRow(trip) }.buttonStyle(.plain)
+                                HStack(spacing: 10) {
+                                    NavigationLink { TripDetailView(tripID: trip.id) } label: { tripRow(trip) }.buttonStyle(.plain)
+                                    DeleteIconButton { pendingDelete = trip }
+                                }.cardStyle(padding: 14)
                             }
                         }
                     }
@@ -254,8 +258,15 @@ struct DashboardView: View {
             .toolbarBackground(Theme.background, for: .navigationBar)
             .sheet(isPresented: $starting) { startSheet }
             .sheet(isPresented: $addingVehicle) { VehicleEditorView(existing: nil) }
+            .alert("Delete this trip?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), presenting: pendingDelete) { trip in
+                Button("Delete trip", role: .destructive) { do { try store.deleteTrip(trip.id) } catch { store.error = error.localizedDescription } }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text($0.deleteSummary) }
             .sheet(item: $share) { ShareSheet(urls: $0.urls) }
-            .onAppear { if DemoMode.flag("-WorklogShowStart") { purpose = store.lastTripDescription; starting = true } }
+            .onAppear {
+                if DemoMode.flag("-WorklogShowStart") { purpose = store.lastTripDescription; starting = true }
+                if DemoMode.flag("-WorklogShowDelete") { pendingDelete = trips.first }
+            }
         }
     }
 
@@ -351,7 +362,7 @@ struct DashboardView: View {
                 Text(trip.excluded == true ? "private" : "km").font(.caption2).foregroundStyle(Theme.textTertiary)
             }
             Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Theme.textTertiary)
-        }.cardStyle(padding: 14)
+        }.contentShape(Rectangle())
     }
 
     var startSheet: some View {
@@ -397,6 +408,40 @@ struct DashboardView: View {
     }
 }
 
+// MARK: - Deleting
+
+extension Trip {
+    /// Shown in the delete confirmation so the driver can check it's the right trip.
+    var deleteSummary: String {
+        var lines = [purpose, start.formatted(date: .abbreviated, time: .shortened), String(format: "%.1f km", km)]
+        if !vehicle.isEmpty { lines.append(vehicle) }
+        return lines.joined(separator: "\n") + "\n\nThis can't be undone."
+    }
+}
+
+extension Invoice {
+    var deleteSummary: String {
+        var lines = [supplier, date.formatted(date: .abbreviated, time: .shortened)]
+        if let amount = Double(total) { lines.append(amount.formatted(.currency(code: "AUD"))) }
+        if !number.isEmpty { lines.append("Invoice \(number)") }
+        return lines.joined(separator: "\n") + "\n\nThe scanned PDF is deleted too. This can't be undone."
+    }
+}
+
+/// Small red bin button used on every trip and receipt.
+struct DeleteIconButton: View {
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "trash").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.danger)
+                .frame(width: 38, height: 38)
+                .background(Theme.danger.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel("Delete")
+    }
+}
+
 struct StatChip: View {
     let icon: String, text: String, color: Color
     var body: some View {
@@ -411,6 +456,8 @@ struct StatChip: View {
 
 struct TripDetailView: View {
     @EnvironmentObject var store: WorkStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var confirmDelete = false
     let tripID: UUID
     @State private var purpose = ""
     @State private var odometerStart = ""
@@ -480,8 +527,18 @@ struct TripDetailView: View {
                     }.buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent)).buttonRow()
                 } header: { Text("Correct missing GPS distance") } footer: { Text("The original GPS record is retained. Corrections crossing 1 July are allocated by elapsed time; review against your records.") }
                 if !message.isEmpty { Label(message, systemImage: message == "Saved." ? "checkmark.circle.fill" : "info.circle").foregroundStyle(message == "Saved." ? Theme.mint : Theme.textSecondary) }
+                Section {
+                    Button(role: .destructive) { confirmDelete = true } label: { Label("Delete trip", systemImage: "trash") }
+                        .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.danger.opacity(0.16)), foreground: Theme.danger)).buttonRow()
+                }
             }
         }
+        .alert("Delete this trip?", isPresented: $confirmDelete, presenting: trip) { t in
+            Button("Delete trip", role: .destructive) {
+                do { try store.deleteTrip(t.id); dismiss() } catch { store.error = error.localizedDescription }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text($0.deleteSummary) }
         .themedForm()
         .navigationTitle("Trip details")
         .onAppear { if let t = trip { purpose = t.purpose; odometerStart = t.odometerStart.map { String($0) } ?? ""; odometerEnd = t.odometerEnd.map { String($0) } ?? ""; excluded = t.excluded ?? false; vehicleID = t.vehicleID; corrected = String(format: "%.3f", t.km); reason = t.correctionReason } }

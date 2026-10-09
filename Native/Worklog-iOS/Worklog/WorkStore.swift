@@ -19,6 +19,27 @@ import Combine
         if !loadFailed { migrateVehicles() }
     }
 
+    // MARK: Deleting records
+
+    /// Permanently removes a saved trip. The trip being recorded is not in this list and can't be deleted.
+    func deleteTrip(_ id: UUID) throws {
+        guard !loadFailed else { throw StoreError.unavailable }
+        let previous = data.trips
+        data.trips.removeAll { $0.id == id }
+        guard data.trips.count < previous.count else { return }
+        if !save() { data.trips = previous; throw StoreError.unavailable }
+    }
+    /// Permanently removes a receipt, its scanned PDF and its transaction file.
+    func deleteInvoice(_ id: UUID) throws {
+        guard !loadFailed else { throw StoreError.unavailable }
+        guard let invoice = data.invoices.first(where: { $0.id == id }) else { return }
+        let previous = data.invoices
+        data.invoices.removeAll { $0.id == id }
+        if !save() { data.invoices = previous; throw StoreError.unavailable }
+        try? FileManager.default.removeItem(at: pdfURL(invoice))
+        try? FileManager.default.removeItem(at: receiptURL(invoice))
+    }
+
     // MARK: Home and work
 
     @discardableResult func savePlace(_ place: Place?, home: Bool) -> Bool {

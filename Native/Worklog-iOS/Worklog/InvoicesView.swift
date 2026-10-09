@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 
 struct InvoicesView: View {
     @EnvironmentObject var store: WorkStore
+    @State private var pendingDelete: Invoice?
     @State private var adding = false
     @State private var year = FinancialYear.startYear()
     var receipts: [Invoice] {
@@ -50,6 +51,7 @@ struct InvoicesView: View {
                 } else {
                     Section("Receipts") {
                         ForEach(receipts) { invoice in
+                          HStack(spacing: 10) {
                             NavigationLink { InvoiceDetailView(initialInvoice: invoice) } label: {
                                 HStack(spacing: 14) {
                                     Image(systemName: "doc.text.fill").font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.accent)
@@ -63,6 +65,9 @@ struct InvoicesView: View {
                                     if let amount = Double(invoice.total) { Text(amount, format: .currency(code: "AUD")).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint) }
                                 }.padding(.vertical, 4)
                             }
+                            DeleteIconButton { pendingDelete = invoice }
+                          }
+                          .swipeActions { Button(role: .destructive) { pendingDelete = invoice } label: { Label("Delete", systemImage: "trash") } }
                         }
                     }
                 }
@@ -70,6 +75,10 @@ struct InvoicesView: View {
             .themedForm()
             .navigationTitle("Receipts")
             .sheet(isPresented: $adding) { AddInvoiceView() }
+            .alert("Delete this receipt?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), presenting: pendingDelete) { invoice in
+                Button("Delete receipt", role: .destructive) { do { try store.deleteInvoice(invoice.id) } catch { store.error = error.localizedDescription } }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text($0.deleteSummary) }
             .onAppear { if DemoMode.flag("-WorklogShowAddReceipt") { adding = true } }
         }
     }
@@ -211,6 +220,8 @@ struct InvoiceDetailView: View {
     @EnvironmentObject var store: WorkStore
     let initialInvoice: Invoice
     var invoice: Invoice { store.data.invoices.first { $0.id == initialInvoice.id } ?? initialInvoice }
+    @Environment(\.dismiss) private var dismiss
+    @State private var confirmDelete = false
     @State private var editing = false
     @State private var pdf: Data?
     @State private var share: ShareFiles?
@@ -240,7 +251,18 @@ struct InvoiceDetailView: View {
                 Button { share = ShareFiles(urls: [store.pdfURL(invoice)]) } label: { Label("Save to Files / Qfile Pro", systemImage: "square.and.arrow.up") }
                     .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent)).buttonRow()
             } footer: { Text("Choose Save to Files or Qfile Pro, then complete the upload to your QNAP. Check Qfile Pro for upload success.") }
-        }.themedForm().navigationTitle("Receipt").navigationBarTitleDisplayMode(.inline).sheet(isPresented: $editing, onDismiss: { pdf = try? Data(contentsOf: store.pdfURL(invoice)) }) { AddInvoiceView(existing: invoice) }.task { do { pdf = try Data(contentsOf: store.pdfURL(invoice)) } catch { store.error = "The original invoice could not be opened: \(error.localizedDescription)" } }
+            Section {
+                Button(role: .destructive) { confirmDelete = true } label: { Label("Delete receipt", systemImage: "trash") }
+                    .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.danger.opacity(0.16)), foreground: Theme.danger)).buttonRow()
+            }
+        }
+        .alert("Delete this receipt?", isPresented: $confirmDelete) {
+            Button("Delete receipt", role: .destructive) {
+                do { try store.deleteInvoice(invoice.id); dismiss() } catch { store.error = error.localizedDescription }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text(invoice.deleteSummary) }
+        .themedForm().navigationTitle("Receipt").navigationBarTitleDisplayMode(.inline).sheet(isPresented: $editing, onDismiss: { pdf = try? Data(contentsOf: store.pdfURL(invoice)) }) { AddInvoiceView(existing: invoice) }.task { do { pdf = try Data(contentsOf: store.pdfURL(invoice)) } catch { store.error = "The original invoice could not be opened: \(error.localizedDescription)" } }
         .sheet(item: $share) { ShareSheet(urls: $0.urls) }
     }
 }
