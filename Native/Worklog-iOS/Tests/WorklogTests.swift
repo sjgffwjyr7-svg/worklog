@@ -40,6 +40,23 @@ final class WorklogTests: XCTestCase {
         XCTAssertEqual(TripCalendar.trips([sunday, monday, lateMonday], onDay: days[0], timeZoneID: "Australia/Perth").map(\.id), [monday.id, lateMonday.id])
         XCTAssertEqual(TripCalendar.trips([sunday, monday, lateMonday], inWeek: weeks[1], timeZoneID: "Australia/Perth").map(\.id), [sunday.id])
     }
+    func testTripLogYearsAndMonthsFollowFinancialYear() {
+        func trip(_ when: String, km: Double, privateTrip: Bool = false) -> Trip {
+            var t = Trip(purpose: "Work", vehicle: "", start: iso.date(from: when)!, automatic: false, timeZoneID: "Australia/Perth")
+            t.correctedKm = km; if privateTrip { t.excluded = true }; return t
+        }
+        let june = trip("2026-06-30T20:00:00+08:00", km: 10), july = trip("2026-07-01T08:00:00+08:00", km: 20)
+        let lateJuly = trip("2026-07-31T23:00:00+08:00", km: 5, privateTrip: true), sept = trip("2026-09-30T09:00:00+08:00", km: 7)
+        let all = [june, july, lateJuly, sept]
+        XCTAssertEqual(TripCalendar.financialYears(all, timeZoneID: "Australia/Perth"), [2026, 2025])
+        let months = TripCalendar.months(all, timeZoneID: "Australia/Perth")
+        XCTAssertEqual(months.first, iso.date(from: "2026-09-01T00:00:00+08:00")!)
+        XCTAssertEqual(months.count, 3)
+        let julySpan = TripCalendar.monthInterval(of: iso.date(from: "2026-07-15T00:00:00+08:00")!, timeZoneID: "Australia/Perth")
+        let julyTrips = TripCalendar.trips(all, within: julySpan)
+        XCTAssertEqual(julyTrips.count, 2)
+        XCTAssertEqual(TripCalendar.workKm(julyTrips), 20, accuracy: 0.001, "Private trips are left out of totals")
+    }
     func testDataRoundTrip() throws {
         var data = WorkData(); data.schedule.enabled = true
         let decoded = try JSONDecoder().decode(WorkData.self, from: JSONEncoder().encode(data))
@@ -318,6 +335,28 @@ final class ReceiptTests: XCTestCase {
         XCTAssertNil(store.placeAssessment(trip(from: work, to: client, endingAt: noon)))
         var confirmed = trip(from: work, to: home, endingAt: noon); confirmed.placeReviewed = true
         XCTAssertNil(store.placeAssessment(confirmed))
+    }
+    @MainActor func testContinueLastTripKeepsStopAsPause() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorkStore(root: root)
+        let now = Date()
+        var older = Trip(purpose: "Older", vehicle: "", start: now.addingTimeInterval(-7200), automatic: false, timeZoneID: "Australia/Perth")
+        older.end = now.addingTimeInterval(-6000)
+        var pickup = Trip(purpose: "Supply pickup", vehicle: "", start: now.addingTimeInterval(-3600), automatic: false, timeZoneID: "Australia/Perth")
+        pickup.end = now.addingTimeInterval(-1800); pickup.odometerStart = 1000; pickup.odometerEnd = 1020; pickup.correctedKm = nil
+        store.data.trips = [pickup, older]; XCTAssertTrue(store.save())
+        XCTAssertEqual(store.continuableTrip(now: now)?.id, pickup.id)
+        XCTAssertNil(store.continuableTrip(now: now.addingTimeInterval(13 * 3600)), "Too old to continue")
+        XCTAssertTrue(store.reopenTrip(pickup.id, at: now))
+        let active = try XCTUnwrap(store.data.active)
+        XCTAssertEqual(active.id, pickup.id)
+        XCTAssertNil(active.end); XCTAssertNil(active.odometerEnd); XCTAssertEqual(active.odometerStart, 1000)
+        XCTAssertEqual(active.pauses?.first?.duration ?? 0, 1800, accuracy: 1)
+        XCTAssertFalse(store.data.trips.contains { $0.id == pickup.id })
+        XCTAssertNil(store.continuableTrip(now: now), "Nothing to continue while a trip is recording")
+        XCTAssertFalse(store.reopenTrip(older.id, at: now))
+        XCTAssertEqual(WorkStore(root: root).data.active?.id, pickup.id, "Saved immediately")
     }
     @MainActor func testDeletingTripAndReceiptIsPermanent() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

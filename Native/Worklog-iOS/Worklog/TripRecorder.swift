@@ -14,6 +14,8 @@ import Combine
     private var cooldownUntil = Date.distantPast
     private var timer: Timer?
     private var armed = false
+    /// True between continuing a trip and its first new GPS fix, so the stop isn't flagged as a GPS gap.
+    private var resuming = false
     init(store: WorkStore) {
         self.store = store
         super.init()
@@ -89,6 +91,16 @@ import Combine
         anchor = nil; lastMovement = nil; configure(); status = "Finding GPS…"
         return true
     }
+    /// Continues the most recent trip after a stop (e.g. drive to the supplier, pick up parts, drive back).
+    @discardableResult func continueLastTrip() -> Bool {
+        guard store.data.active == nil else { status = "A trip is already recording."; return false }
+        guard let trip = store.continuableTrip() else { status = "No trip from the last 12 hours to continue. Start a new trip."; return false }
+        guard authorization == .authorizedAlways || authorization == .authorizedWhenInUse else { requestPermission(); status = "Allow location, then continue the trip again"; return false }
+        guard store.reopenTrip(trip.id) else { status = "Trip was not continued because local saving failed."; return false }
+        anchor = nil; lastMovement = nil; candidate = nil; resuming = true
+        configure(); status = "Continuing \(trip.purpose) · finding GPS…"
+        return true
+    }
     func finish(at date: Date = Date(), reason: String? = nil, cooldown: Bool = false) {
         guard var trip = store.data.active else { return }
         trip.end = max(trip.start, date)
@@ -156,7 +168,11 @@ import Combine
         var point = GPSPoint(fix)
         if let last = trip.points.last {
             guard point.date > last.date else { return }
-            if point.date.timeIntervalSince(last.date) > 60 { trip.review("GPS gap over 60 seconds; missing distance not estimated"); anchor = nil }
+            if point.date.timeIntervalSince(last.date) > 60 {
+                // The first fix after continuing a trip follows a deliberate stop, not lost GPS.
+                if !resuming { trip.review("GPS gap over 60 seconds; missing distance not estimated") }
+                anchor = nil
+            }
         }
         if let previous = anchor {
             let dt = point.date.timeIntervalSince(previous.date), metres = point.location.distance(from: previous.location)
@@ -168,6 +184,7 @@ import Combine
                 anchor = point; lastMovement = point.date
             }
         } else { anchor = point; lastMovement = point.date }
+        resuming = false
         trip.points.append(point)
         store.data.active = trip
         store.save()

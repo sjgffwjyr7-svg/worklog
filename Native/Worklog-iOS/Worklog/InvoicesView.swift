@@ -271,12 +271,29 @@ struct StorageView: View {
     @State private var importing = false
     @State private var notice = ""
     @State private var exportYear = FinancialYear.startYear()
+    var thisYearKm: Double {
+        let tz = store.data.schedule.timeZoneID
+        let span = FinancialYear.interval(FinancialYear.startYear(for: Date(), timeZone: tz), timeZone: tz)
+        return TripCalendar.workKm(store.data.trips.filter { span.contains($0.start) })
+    }
     var exportYears: [Int] {
         Array(Set([FinancialYear.startYear(), FinancialYear.startYear() - 1] + store.data.trips.map { FinancialYear.startYear(for: $0.start) } + store.data.invoices.map { FinancialYear.startYear(for: $0.date) })).sorted(by: >)
     }
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    NavigationLink { TripLogView() } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: "list.bullet.rectangle.portrait.fill").foregroundStyle(Theme.accent)
+                                .frame(width: 38, height: 38).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Trip log & kilometre totals").font(.headline)
+                                Text("This financial year: " + thisYearKm.formatted(.number.precision(.fractionLength(1))) + " work km").font(.caption).foregroundStyle(Theme.mint)
+                            }
+                        }
+                    }
+                } header: { Text("Logbook") } footer: { Text("Totals by financial year, month, week and day.") }
                 Section {
                     DropdownField(label: "Financial year", selection: $exportYear, options: exportYears,
                                   title: { "FY \(String($0))–\(String($0 + 1).suffix(2)) · 1 July \(String($0)) – 30 June \(String($0 + 1))" }).padding(.vertical, 6)

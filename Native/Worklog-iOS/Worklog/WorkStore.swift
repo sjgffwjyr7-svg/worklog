@@ -19,6 +19,32 @@ import Combine
         if !loadFailed { migrateVehicles() }
     }
 
+    // MARK: Continuing a trip
+
+    /// A finished trip can be continued for this long, e.g. after a stop to pick up parts.
+    static let continueWindow: TimeInterval = 12 * 3600
+    /// The most recent finished trip, if it ended recently enough to continue and nothing is recording.
+    func continuableTrip(now: Date = Date()) -> Trip? {
+        guard data.active == nil,
+              let trip = data.trips.max(by: { ($0.end ?? $0.start) < ($1.end ?? $1.start) }),
+              let end = trip.end, now >= end, now.timeIntervalSince(end) <= Self.continueWindow else { return nil }
+        return trip
+    }
+    /// Reopens a finished trip as the active trip. The stop is kept as a pause; no distance is added for it.
+    @discardableResult func reopenTrip(_ id: UUID, at now: Date = Date()) -> Bool {
+        guard data.active == nil, let index = data.trips.firstIndex(where: { $0.id == id }), let end = data.trips[index].end else { return false }
+        let previous = data
+        var trip = data.trips.remove(at: index)
+        trip.pauses = (trip.pauses ?? []) + [DateInterval(start: end, end: max(end, now))]
+        trip.end = nil
+        trip.odometerEnd = nil       // The finishing reading is entered again at the real finish.
+        trip.automatic = false       // Continued by the driver, so the schedule doesn't auto-finish it.
+        trip.scheduleEnd = nil
+        data.active = trip
+        if save() { return true }
+        data = previous; return false
+    }
+
     // MARK: Deleting records
 
     /// Permanently removes a saved trip. The trip being recorded is not in this list and can't be deleted.
@@ -289,9 +315,9 @@ import Combine
             let safe = value.first.map { "=+-@\t\r".contains($0) } == true ? "'" + value : value
             return "\"" + safe.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         }
-        var rows = [["Trip ID", "Purpose", "Vehicle", "Started UTC", "Finished UTC", "Time zone", "Work km in selected FY", "Full trip km", "GPS km", "Automatic", "Review", "Correction reason", "Odometer start km", "Odometer finish km", "Classification", "Home/work check"]]
+        var rows = [["Trip ID", "Purpose", "Vehicle", "Started UTC", "Finished UTC", "Time zone", "Work km in selected FY", "Full trip km", "GPS km", "Automatic", "Review", "Correction reason", "Odometer start km", "Odometer finish km", "Classification", "Home/work check", "Stops (minutes)"]]
         for t in data.trips where (t.end ?? t.start) > interval.start && t.start < interval.end && (vehicle == nil || t.vehicleID == vehicle?.id) {
-            rows.append([t.id.uuidString, t.purpose, t.vehicle, formatter.string(from: t.start), t.end.map { formatter.string(from: $0) } ?? "", t.timeZoneID, String(format: "%.3f", t.km(in: interval)), String(format: "%.3f", t.km), String(format: "%.3f", t.metres / 1000), t.automatic ? "Yes" : "No", t.reviewReasons.joined(separator: "; "), t.correctionReason, t.odometerStart.map { String($0) } ?? "", t.odometerEnd.map { String($0) } ?? "", t.excluded == true ? "Personal / excluded" : "Work", placeAssessment(t).map { "\($0.short) \($0.message)" } ?? (t.placeReviewed == true ? "Confirmed work by driver" : "")])
+            rows.append([t.id.uuidString, t.purpose, t.vehicle, formatter.string(from: t.start), t.end.map { formatter.string(from: $0) } ?? "", t.timeZoneID, String(format: "%.3f", t.km(in: interval)), String(format: "%.3f", t.km), String(format: "%.3f", t.metres / 1000), t.automatic ? "Yes" : "No", t.reviewReasons.joined(separator: "; "), t.correctionReason, t.odometerStart.map { String($0) } ?? "", t.odometerEnd.map { String($0) } ?? "", t.excluded == true ? "Personal / excluded" : "Work", placeAssessment(t).map { "\($0.short) \($0.message)" } ?? (t.placeReviewed == true ? "Confirmed work by driver" : ""), (t.pauses ?? []).map { String(Int($0.duration / 60)) }.joined(separator: "; ")])
         }
         let csv = "\u{FEFF}" + rows.map { $0.map(cell).joined(separator: ",") }.joined(separator: "\r\n")
         let suffix = vehicle.map { "-" + $0.displayName.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }.joined(separator: "-") } ?? ""

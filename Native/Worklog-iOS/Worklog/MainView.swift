@@ -277,6 +277,16 @@ struct DashboardView: View {
                 CurrentVehicleMenu(addingVehicle: $addingVehicle)
                 Button { purpose = store.lastTripDescription; startingOdometer = ""; starting = true } label: { Label("Start work trip", systemImage: "play.fill") }
                     .buttonStyle(PrimaryButtonStyle())
+                if let last = store.continuableTrip() {
+                    // Drive back after a stop (e.g. picking up parts) as part of the same trip.
+                    Button { recorder.continueLastTrip() } label: {
+                        VStack(spacing: 3) {
+                            Label("Continue last trip", systemImage: "arrow.uturn.backward")
+                            (Text(last.purpose) + Text(" · stopped ") + Text(last.end ?? last.start, style: .relative) + Text(" ago"))
+                                .font(.caption.weight(.medium)).lineLimit(1).opacity(0.85)
+                        }
+                    }.buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent))
+                }
             }
             Label(recorder.status, systemImage: "location.fill").font(.caption).foregroundStyle(Theme.textTertiary)
         }
@@ -401,6 +411,9 @@ struct TripDetailView: View {
                     LabeledContent("Vehicle", value: t.vehicle.isEmpty ? "Not entered" : t.vehicle)
                     LabeledContent("Recording", value: t.automatic ? "Scheduled" : "Manual")
                     LabeledContent("Time zone", value: t.timeZoneID)
+                    ForEach(Array((t.pauses ?? []).enumerated()), id: \.offset) { _, stop in
+                        LabeledContent("Stop", value: "\(stop.start.formatted(date: .omitted, time: .shortened)) – \(stop.end.formatted(date: .omitted, time: .shortened)) · \(Int(stop.duration / 60)) min")
+                    }
                 } header: { Text("Work trip") }
                 if let check = store.placeAssessment(t) {
                     Section {

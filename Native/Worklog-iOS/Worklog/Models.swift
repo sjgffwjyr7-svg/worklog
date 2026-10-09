@@ -62,6 +62,8 @@ struct Trip: Codable, Identifiable {
     var correctionReason = ""
     var correctedAt: Date? = nil
     var vehicleID: UUID? = nil
+    /// Stops where a finished trip was later continued (e.g. picking up parts before driving back).
+    var pauses: [DateInterval]? = nil
     /// Set once the driver has answered the home/work check for this trip.
     var placeReviewed: Bool? = nil
     var metres: Double { points.reduce(0) { $0 + $1.segmentMetres } }

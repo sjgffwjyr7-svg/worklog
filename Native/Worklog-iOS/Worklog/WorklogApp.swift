@@ -270,6 +270,28 @@ struct SetStartingOdometerIntent: AppIntent {
     }
 }
 
+struct ContinueTripIntent: AppIntent {
+    static var title: LocalizedStringResource = "Continue last trip"
+    static var description = IntentDescription("Continue your most recent trip after a stop, such as driving back to the workshop after picking up parts. GPS recording resumes on the same trip.")
+    static var openAppWhenRun: Bool = true
+    static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+
+    @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
+        let runtime = WorklogRuntime.shared
+        let recorder = runtime.recorder // Also applies any cold-launch interrupted-trip recovery first.
+        guard !runtime.store.loadFailed else { return .result(dialog: "Worklog cannot open its saved records. Open the app to resolve the storage error.") }
+        guard runtime.store.data.active == nil else { return .result(dialog: "A trip is already recording.") }
+        guard let trip = runtime.store.continuableTrip(), let end = trip.end else {
+            return .result(dialog: "There's no trip from the last 12 hours to continue. Say start a work trip in Worklog instead.")
+        }
+        let minutes = max(1, Int(Date().timeIntervalSince(end) / 60))
+        let ago = minutes >= 60 ? "\(minutes / 60) hours and \(minutes % 60) minutes" : "\(minutes) minutes"
+        try await requestConfirmation(result: .result(dialog: "Continue your trip for \(trip.purpose), which stopped \(ago) ago?"))
+        guard recorder.continueLastTrip() else { return .result(dialog: "Trip not continued. \(recorder.status)") }
+        return .result(dialog: "Continuing \(trip.purpose). The stop has been noted and GPS recording has resumed.")
+    }
+}
+
 struct WorklogShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: DictateWorkTripIntent(), phrases: [
@@ -286,6 +308,12 @@ struct WorklogShortcuts: AppShortcutsProvider {
             "Set starting odometer in \(.applicationName)",
             "Set my starting kilometres in \(.applicationName)"
         ], shortTitle: "Starting odometer", systemImageName: "gauge")
+        AppShortcut(intent: ContinueTripIntent(), phrases: [
+            "Continue my trip in \(.applicationName)",
+            "Continue last trip in \(.applicationName)",
+            "Resume my trip in \(.applicationName)",
+            "Head back in \(.applicationName)"
+        ], shortTitle: "Continue last trip", systemImageName: "arrow.uturn.backward")
         AppShortcut(intent: SelectVehicleIntent(), phrases: [
             "Change vehicle in \(.applicationName)",
             "Switch vehicle in \(.applicationName)",
