@@ -895,7 +895,7 @@ struct LogFolderRow: View {
 }
 
 /// Trips in the selected financial year and vehicle, shared by the trip log screens.
-private func logTrips(_ store: WorkStore, year: Int, vehicleFilter: UUID?) -> [Trip] {
+@MainActor private func logTrips(_ store: WorkStore, year: Int, vehicleFilter: UUID?) -> [Trip] {
     let span = FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID)
     return store.data.trips.filter { ($0.end ?? $0.start) > span.start && $0.start < span.end && (vehicleFilter == nil || $0.vehicleID == vehicleFilter) }
 }
