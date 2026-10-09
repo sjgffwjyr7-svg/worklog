@@ -270,9 +270,22 @@ struct StorageView: View {
     @State private var share: ShareFiles?
     @State private var importing = false
     @State private var notice = ""
+    @State private var exportYear = FinancialYear.startYear()
+    var exportYears: [Int] {
+        Array(Set([FinancialYear.startYear(), FinancialYear.startYear() - 1] + store.data.trips.map { FinancialYear.startYear(for: $0.start) } + store.data.invoices.map { FinancialYear.startYear(for: $0.date) })).sorted(by: >)
+    }
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    DropdownField(label: "Financial year", selection: $exportYear, options: exportYears,
+                                  title: { "FY \(String($0))–\(String($0 + 1).suffix(2)) · 1 July \(String($0)) – 30 June \(String($0 + 1))" }).padding(.vertical, 6)
+                    Button { do { share = ShareFiles(urls: try store.accountantExport(year: exportYear)) } catch { store.error = error.localizedDescription } } label: {
+                        Label("Export for accountant", systemImage: "square.and.arrow.up")
+                    }.buttonStyle(PrimaryButtonStyle()).buttonRow()
+                } header: { Text("Accountant") } footer: {
+                    Text("Exports the trip log (all vehicles and each vehicle), receipt register, notes and the original receipt PDFs for the year. Send them by email, AirDrop, Files or Qfile Pro.")
+                }
                 VehiclesSettingsSection()
                 PlacesSettingsSection()
                 AppLockSettings()

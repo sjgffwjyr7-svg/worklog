@@ -170,6 +170,39 @@ enum FinancialYear {
     }
 }
 
+/// Monday-to-Sunday weeks for the trip log, in the schedule's time zone.
+enum TripCalendar {
+    static func calendar(_ timeZoneID: String) -> Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: timeZoneID) ?? .current
+        cal.firstWeekday = 2 // Monday
+        cal.minimumDaysInFirstWeek = 4
+        return cal
+    }
+    static func weekStart(of date: Date, timeZoneID: String) -> Date {
+        let cal = calendar(timeZoneID)
+        return cal.dateInterval(of: .weekOfYear, for: date)?.start ?? cal.startOfDay(for: date)
+    }
+    /// Week starts (Mondays) that contain at least one trip, newest first.
+    static func weeks(_ trips: [Trip], timeZoneID: String) -> [Date] {
+        Array(Set(trips.map { weekStart(of: $0.start, timeZoneID: timeZoneID) })).sorted(by: >)
+    }
+    /// The seven days (Monday first) of the week starting at `weekStart`.
+    static func days(inWeek weekStart: Date, timeZoneID: String) -> [Date] {
+        let cal = calendar(timeZoneID)
+        return (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: weekStart) }
+    }
+    static func trips(_ trips: [Trip], onDay day: Date, timeZoneID: String) -> [Trip] {
+        let cal = calendar(timeZoneID)
+        return trips.filter { cal.isDate($0.start, inSameDayAs: day) }.sorted { $0.start < $1.start }
+    }
+    static func trips(_ trips: [Trip], inWeek weekStart: Date, timeZoneID: String) -> [Trip] {
+        trips.filter { self.weekStart(of: $0.start, timeZoneID: timeZoneID) == weekStart }
+    }
+    /// Work kilometres, leaving out trips marked private.
+    static func workKm(_ trips: [Trip]) -> Double { trips.filter { $0.excluded != true }.reduce(0) { $0 + $1.km } }
+}
+
 enum ExpenseCategories {
     static let all = ["Vehicle — fuel, servicing & running costs", "Work travel & accommodation", "Tools & equipment", "Phone & internet", "Home office", "Protective clothing, uniforms & laundry", "Training & self-education", "Professional fees, unions & subscriptions", "Business operating expenses", "Insurance", "Investment expenses", "Rental property expenses", "Donations & gifts", "Tax-agent & tax-affairs costs", "Other / custom category"]
 }

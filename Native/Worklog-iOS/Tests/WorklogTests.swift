@@ -29,6 +29,17 @@ final class WorklogTests: XCTestCase {
         XCTAssertEqual(trip.km(in: FinancialYear.interval(2025)), 0.5, accuracy: 0.0001)
         XCTAssertEqual(trip.km(in: FinancialYear.interval(2026)), 0.5, accuracy: 0.0001)
     }
+    func testTripLogWeeksRunMondayToSunday() {
+        func trip(_ when: String) -> Trip { Trip(purpose: "Work", vehicle: "", start: iso.date(from: when)!, automatic: false, timeZoneID: "Australia/Perth") }
+        let sunday = trip("2026-09-13T16:00:00+08:00"), monday = trip("2026-09-14T08:00:00+08:00"), lateMonday = trip("2026-09-14T23:30:00+08:00")
+        let weeks = TripCalendar.weeks([sunday, monday, lateMonday], timeZoneID: "Australia/Perth")
+        XCTAssertEqual(weeks, [iso.date(from: "2026-09-14T00:00:00+08:00")!, iso.date(from: "2026-09-07T00:00:00+08:00")!])
+        let days = TripCalendar.days(inWeek: weeks[0], timeZoneID: "Australia/Perth")
+        XCTAssertEqual(days.count, 7)
+        XCTAssertEqual(days.last, iso.date(from: "2026-09-20T00:00:00+08:00")!)
+        XCTAssertEqual(TripCalendar.trips([sunday, monday, lateMonday], onDay: days[0], timeZoneID: "Australia/Perth").map(\.id), [monday.id, lateMonday.id])
+        XCTAssertEqual(TripCalendar.trips([sunday, monday, lateMonday], inWeek: weeks[1], timeZoneID: "Australia/Perth").map(\.id), [sunday.id])
+    }
     func testDataRoundTrip() throws {
         var data = WorkData(); data.schedule.enabled = true
         let decoded = try JSONDecoder().decode(WorkData.self, from: JSONEncoder().encode(data))

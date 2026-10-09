@@ -54,7 +54,10 @@ jobs:
           }
           NAME=1-trips shoot -WorklogTab 0
           NAME=2-start-trip shoot -WorklogTab 0 -WorklogShowStart
-          NAME=2b-delete-trip shoot -WorklogTab 0 -WorklogShowDelete
+          NAME=1b-trip-log shoot -WorklogTab 0 -WorklogOpenTripLog
+          NAME=1c-trip-week shoot -WorklogTab 0 -WorklogOpenTripLog -WorklogOpenWeek
+          NAME=1d-trip-day shoot -WorklogTab 0 -WorklogOpenTripLog -WorklogOpenWeek -WorklogOpenDay
+          NAME=2b-delete-trip shoot -WorklogTab 0 -WorklogOpenTripLog -WorklogOpenWeek -WorklogOpenDay -WorklogShowDelete
           NAME=3-receipts shoot -WorklogTab 1
           NAME=4-add-receipt shoot -WorklogTab 1 -WorklogShowAddReceipt
           NAME=5-schedule shoot -WorklogTab 2

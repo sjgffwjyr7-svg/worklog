@@ -172,12 +172,11 @@ struct DashboardView: View {
     @State private var starting = false
     @State private var startingOdometer = ""
     @State private var purpose = ""
-    @State private var share: ShareFiles?
     @State private var vehicleFilter: UUID?
     @State private var addingVehicle = false
     @State private var addingVehicleFromStart = false
     @State private var odometerWarning: OdometerCheck?
-    @State private var pendingDelete: Trip?
+    @State private var openTripLog = false
     var interval: DateInterval { FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID) }
     var trips: [Trip] { store.data.trips.filter { ($0.end ?? $0.start) > interval.start && $0.start < interval.end && (vehicleFilter == nil || $0.vehicleID == vehicleFilter) }.sorted { $0.start > $1.start } }
     var years: [Int] { Array(Set([year, FinancialYear.startYear(), FinancialYear.startYear()-1] + store.data.trips.map { FinancialYear.startYear(for: $0.start) } + store.data.invoices.map { FinancialYear.startYear(for: $0.date) })).sorted(by: >) }
@@ -224,16 +223,6 @@ struct DashboardView: View {
                         .cardStyle(padding: 18)
                         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.warning.opacity(0.35)))
                     }
-                    HStack {
-                        Text("Trip log").font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
-                        Spacer()
-                        Button { do { share = ShareFiles(urls: try store.accountantExport(year: year)) } catch { store.error = error.localizedDescription } } label: {
-                            Label("Accountant", systemImage: "square.and.arrow.up").font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Theme.accent)
-                                .padding(.horizontal, 12).padding(.vertical, 7)
-                                .background(Theme.accent.opacity(0.14), in: Capsule())
-                        }
-                    }.padding(.top, 6)
                     if trips.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: "road.lanes").font(.system(size: 34)).foregroundStyle(Theme.accent)
@@ -242,14 +231,22 @@ struct DashboardView: View {
                                 .font(.subheadline).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
                         }.frame(maxWidth: .infinity).cardStyle(padding: 28)
                     } else {
-                        LazyVStack(spacing: 10) {
-                            ForEach(trips) { trip in
-                                HStack(spacing: 10) {
-                                    NavigationLink { TripDetailView(tripID: trip.id) } label: { tripRow(trip) }.buttonStyle(.plain)
-                                    DeleteIconButton { pendingDelete = trip }
-                                }.cardStyle(padding: 14)
-                            }
-                        }
+                        Button { openTripLog = true } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: "list.bullet.rectangle.portrait.fill").font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.accent)
+                                    .frame(width: 46, height: 46).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Trip log").font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
+                                    Text("\(trips.count) trips · by week, Monday to Sunday").font(.subheadline).foregroundStyle(Theme.textSecondary)
+                                    if let last = trips.first {
+                                        (Text("Last: ") + Text(last.purpose) + Text(" · ") + Text(last.start, format: .dateTime.weekday(.abbreviated).day().month()))
+                                            .font(.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
+                                    }
+                                }
+                                Spacer(minLength: 8)
+                                Image(systemName: "chevron.right").font(.subheadline.weight(.bold)).foregroundStyle(Theme.accent)
+                            }.contentShape(Rectangle()).cardStyle(padding: 16)
+                        }.buttonStyle(.plain)
                     }
                 }.padding(.horizontal, 18).padding(.vertical, 12)
             }
@@ -258,14 +255,10 @@ struct DashboardView: View {
             .toolbarBackground(Theme.background, for: .navigationBar)
             .sheet(isPresented: $starting) { startSheet }
             .sheet(isPresented: $addingVehicle) { VehicleEditorView(existing: nil) }
-            .alert("Delete this trip?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), presenting: pendingDelete) { trip in
-                Button("Delete trip", role: .destructive) { do { try store.deleteTrip(trip.id) } catch { store.error = error.localizedDescription } }
-                Button("Cancel", role: .cancel) {}
-            } message: { Text($0.deleteSummary) }
-            .sheet(item: $share) { ShareSheet(urls: $0.urls) }
+            .navigationDestination(isPresented: $openTripLog) { TripLogView(year: year, vehicleFilter: vehicleFilter) }
             .onAppear {
                 if DemoMode.flag("-WorklogShowStart") { purpose = store.lastTripDescription; starting = true }
-                if DemoMode.flag("-WorklogShowDelete") { pendingDelete = trips.first }
+                if DemoMode.flag("-WorklogOpenTripLog") { openTripLog = true }
             }
         }
     }
@@ -340,28 +333,6 @@ struct DashboardView: View {
         }
         .cardStyle(padding: 20)
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(store.data.active == nil ? Theme.accent.opacity(0.35) : Theme.danger.opacity(0.5), lineWidth: 1))
-    }
-
-    func tripRow(_ trip: Trip) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: trip.automatic ? "calendar.badge.clock" : "car.side.fill")
-                .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.accent)
-                .frame(width: 36, height: 36).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            VStack(alignment: .leading, spacing: 4) {
-                Text(trip.purpose).font(.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                (Text(trip.start, format: .dateTime.weekday(.abbreviated).day().month().hour().minute()) + Text(trip.vehicle.isEmpty ? "" : " · \(trip.vehicle)"))
-                    .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
-                HStack(spacing: 8) {
-                    if let check = store.placeAssessment(trip) { Label(check.short, systemImage: check.kind == .homeBreak ? "cup.and.saucer.fill" : "house.fill").font(.caption2.weight(.semibold)).foregroundStyle(Theme.warning) }
-                    if !trip.reviewReasons.isEmpty { Label("Review GPS", systemImage: "exclamationmark.triangle.fill").font(.caption2.weight(.semibold)).foregroundStyle(Theme.warning) }
-                }
-            }
-            Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(trip.km(in: interval), format: .number.precision(.fractionLength(1))).font(.headline.monospacedDigit()).foregroundStyle(trip.excluded == true ? Theme.textTertiary : Theme.mint)
-                Text(trip.excluded == true ? "private" : "km").font(.caption2).foregroundStyle(Theme.textTertiary)
-            }
-        }.contentShape(Rectangle())
     }
 
     var startSheet: some View {
@@ -859,5 +830,177 @@ struct PlaceEditorView: View {
         guard var place = found else { return }
         place.radius = radius
         if store.savePlace(place, home: home) { dismiss() } else { message = "Not saved. Check device storage." }
+    }
+}
+
+// MARK: - Trip log (weeks → days → trips)
+
+struct TripRow: View {
+    @EnvironmentObject var store: WorkStore
+    let trip: Trip
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: trip.automatic ? "calendar.badge.clock" : "car.side.fill")
+                .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.accent)
+                .frame(width: 36, height: 36).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(trip.purpose).font(.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                (Text(trip.start, format: .dateTime.hour().minute()) + Text(trip.end.map { " – " + $0.formatted(.dateTime.hour().minute()) } ?? "") + Text(trip.vehicle.isEmpty ? "" : " · \(trip.vehicle)"))
+                    .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                HStack(spacing: 8) {
+                    if let check = store.placeAssessment(trip) { Label(check.short, systemImage: check.kind == .homeBreak ? "cup.and.saucer.fill" : "house.fill").font(.caption2.weight(.semibold)).foregroundStyle(Theme.warning) }
+                    if !trip.reviewReasons.isEmpty { Label("Review GPS", systemImage: "exclamationmark.triangle.fill").font(.caption2.weight(.semibold)).foregroundStyle(Theme.warning) }
+                }
+            }
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(trip.km, format: .number.precision(.fractionLength(1))).font(.headline.monospacedDigit()).foregroundStyle(trip.excluded == true ? Theme.textTertiary : Theme.mint)
+                Text(trip.excluded == true ? "private" : "km").font(.caption2).foregroundStyle(Theme.textTertiary)
+            }
+        }.contentShape(Rectangle())
+    }
+}
+
+/// Folder-style row used for weeks and days.
+struct LogFolderRow: View {
+    let title: String
+    let subtitle: String
+    let km: Double
+    let count: Int
+    var highlight: String? = nil
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: count == 0 ? "folder" : "folder.fill").font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(count == 0 ? Theme.textTertiary : Theme.accent)
+                .frame(width: 42, height: 42).background((count == 0 ? Theme.field : Theme.accent.opacity(0.14)), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(title).font(.headline).foregroundStyle(count == 0 ? Theme.textTertiary : Theme.textPrimary).lineLimit(1)
+                    if let highlight { StatChip(icon: "star.fill", text: highlight, color: Theme.mint) }
+                }
+                Text(subtitle).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            if count > 0 {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(km, format: .number.precision(.fractionLength(1))).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint)
+                    Text("km").font(.caption2).foregroundStyle(Theme.textTertiary)
+                }
+                Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Theme.textTertiary)
+            } else {
+                Text("No trips").font(.caption).foregroundStyle(Theme.textTertiary)
+            }
+        }.contentShape(Rectangle()).cardStyle(padding: 14)
+    }
+}
+
+/// Trips in the selected financial year and vehicle, shared by the trip log screens.
+private func logTrips(_ store: WorkStore, year: Int, vehicleFilter: UUID?) -> [Trip] {
+    let span = FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID)
+    return store.data.trips.filter { ($0.end ?? $0.start) > span.start && $0.start < span.end && (vehicleFilter == nil || $0.vehicleID == vehicleFilter) }
+}
+
+struct TripLogView: View {
+    @EnvironmentObject var store: WorkStore
+    let year: Int
+    let vehicleFilter: UUID?
+    @State private var openWeek: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var trips: [Trip] { logTrips(store, year: year, vehicleFilter: vehicleFilter) }
+    var body: some View {
+        let all = trips, weeks = TripCalendar.weeks(all, timeZoneID: tz), thisWeek = TripCalendar.weekStart(of: Date(), timeZoneID: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    StatChip(icon: "calendar", text: "FY \(String(year))–\(String(year + 1).suffix(2))", color: Theme.accent)
+                    StatChip(icon: "car.fill", text: store.vehicle(vehicleFilter)?.displayName ?? "All vehicles", color: Theme.mint)
+                }.padding(.bottom, 6)
+                if weeks.isEmpty { Text("No trips in this financial year.").foregroundStyle(Theme.textSecondary) }
+                ForEach(weeks, id: \.self) { week in
+                    let weekTrips = TripCalendar.trips(all, inWeek: week, timeZoneID: tz)
+                    let last = TripCalendar.days(inWeek: week, timeZoneID: tz).last ?? week
+                    Button { openWeek = week } label: {
+                        LogFolderRow(title: "Week of " + week.formatted(.dateTime.weekday(.abbreviated).day().month()),
+                                     subtitle: "Mon \(week.formatted(.dateTime.day().month())) – Sun \(last.formatted(.dateTime.day().month().year())) · \(weekTrips.count) trips",
+                                     km: TripCalendar.workKm(weekTrips), count: weekTrips.count, highlight: week == thisWeek ? "This week" : nil)
+                    }.buttonStyle(.plain)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle("Trip log")
+        .navigationDestination(item: $openWeek) { TripWeekView(weekStart: $0, year: year, vehicleFilter: vehicleFilter) }
+        .onAppear { if DemoMode.flag("-WorklogOpenWeek"), openWeek == nil { openWeek = weeks.first } }
+    }
+}
+
+struct TripWeekView: View {
+    @EnvironmentObject var store: WorkStore
+    let weekStart: Date
+    let year: Int
+    let vehicleFilter: UUID?
+    @State private var openDay: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let weekTrips = TripCalendar.trips(logTrips(store, year: year, vehicleFilter: vehicleFilter), inWeek: weekStart, timeZoneID: tz)
+        let days = TripCalendar.days(inWeek: weekStart, timeZoneID: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(TripCalendar.workKm(weekTrips), format: .number.precision(.fractionLength(1))).font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
+                    Text("work km this week").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
+                }.padding(.bottom, 6)
+                ForEach(days, id: \.self) { day in
+                    let dayTrips = TripCalendar.trips(weekTrips, onDay: day, timeZoneID: tz)
+                    Button { openDay = day } label: {
+                        LogFolderRow(title: day.formatted(.dateTime.weekday(.wide)), subtitle: day.formatted(.dateTime.day().month(.wide).year()) + (dayTrips.isEmpty ? "" : " · \(dayTrips.count) trips"),
+                                     km: TripCalendar.workKm(dayTrips), count: dayTrips.count,
+                                     highlight: TripCalendar.calendar(tz).isDateInToday(day) ? "Today" : nil)
+                    }.buttonStyle(.plain).disabled(dayTrips.isEmpty)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle("Mon \(weekStart.formatted(.dateTime.day().month())) – Sun \((days.last ?? weekStart).formatted(.dateTime.day().month()))")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $openDay) { TripDayView(day: $0, year: year, vehicleFilter: vehicleFilter) }
+        .onAppear {
+            if DemoMode.flag("-WorklogOpenDay"), openDay == nil { openDay = days.last { !TripCalendar.trips(weekTrips, onDay: $0, timeZoneID: tz).isEmpty } }
+        }
+    }
+}
+
+struct TripDayView: View {
+    @EnvironmentObject var store: WorkStore
+    let day: Date
+    let year: Int
+    let vehicleFilter: UUID?
+    @State private var pendingDelete: Trip?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let dayTrips = TripCalendar.trips(logTrips(store, year: year, vehicleFilter: vehicleFilter), onDay: day, timeZoneID: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(TripCalendar.workKm(dayTrips), format: .number.precision(.fractionLength(1))).font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
+                    Text("work km · \(dayTrips.count) trips").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
+                }.padding(.bottom, 6)
+                if dayTrips.isEmpty { Text("No trips on this day.").foregroundStyle(Theme.textSecondary) }
+                ForEach(dayTrips) { trip in
+                    HStack(spacing: 10) {
+                        NavigationLink { TripDetailView(tripID: trip.id) } label: { TripRow(trip: trip) }.buttonStyle(.plain)
+                        DeleteIconButton { pendingDelete = trip }
+                    }.cardStyle(padding: 14)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle(day.formatted(.dateTime.weekday(.wide).day().month()))
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("Delete this trip?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), presenting: pendingDelete) { trip in
+            Button("Delete trip", role: .destructive) { do { try store.deleteTrip(trip.id) } catch { store.error = error.localizedDescription } }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text($0.deleteSummary) }
+        .onAppear { if DemoMode.flag("-WorklogShowDelete"), pendingDelete == nil { pendingDelete = dayTrips.first } }
     }
 }
