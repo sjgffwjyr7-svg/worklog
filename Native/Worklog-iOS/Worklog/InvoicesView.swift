@@ -53,13 +53,11 @@ struct InvoicesView: View {
                         ForEach(receipts) { invoice in
                           HStack(spacing: 10) {
                             NavigationLink { InvoiceDetailView(initialInvoice: invoice) } label: {
-                                HStack(spacing: 14) {
-                                    Image(systemName: "doc.text.fill").font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.accent)
-                                        .frame(width: 40, height: 40).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                                HStack(spacing: 12) {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(invoice.supplier).font(.headline).lineLimit(1)
                                         Text(invoice.category ?? "Uncategorised").font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
-                                        Text(invoice.date.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(Theme.textTertiary)
+                                        Text(invoice.date, format: .dateTime.weekday(.abbreviated).day().month().hour().minute()).font(.caption2).foregroundStyle(Theme.textTertiary).lineLimit(1)
                                     }
                                     Spacer(minLength: 8)
                                     if let amount = Double(invoice.total) { Text(amount, format: .currency(code: "AUD")).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint) }

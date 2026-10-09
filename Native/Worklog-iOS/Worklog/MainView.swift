@@ -343,10 +343,10 @@ struct DashboardView: View {
     }
 
     func tripRow(_ trip: Trip) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             Image(systemName: trip.automatic ? "calendar.badge.clock" : "car.side.fill")
-                .font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.accent)
-                .frame(width: 42, height: 42).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.accent)
+                .frame(width: 36, height: 36).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
                 Text(trip.purpose).font(.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
                 (Text(trip.start, format: .dateTime.weekday(.abbreviated).day().month().hour().minute()) + Text(trip.vehicle.isEmpty ? "" : " · \(trip.vehicle)"))
@@ -361,7 +361,6 @@ struct DashboardView: View {
                 Text(trip.km(in: interval), format: .number.precision(.fractionLength(1))).font(.headline.monospacedDigit()).foregroundStyle(trip.excluded == true ? Theme.textTertiary : Theme.mint)
                 Text(trip.excluded == true ? "private" : "km").font(.caption2).foregroundStyle(Theme.textTertiary)
             }
-            Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Theme.textTertiary)
         }.contentShape(Rectangle())
     }
 
