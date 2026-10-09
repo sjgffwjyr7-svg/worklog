@@ -237,7 +237,7 @@ struct DashboardView: View {
                                     .frame(width: 46, height: 46).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Trip log").font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
-                                    Text("\(trips.count) trips · by week, Monday to Sunday").font(.subheadline).foregroundStyle(Theme.textSecondary)
+                                    Text(tripCount(trips.count) + " · grouped by week").font(.subheadline).foregroundStyle(Theme.textSecondary)
                                     if let last = trips.first {
                                         (Text("Last: ") + Text(last.purpose) + Text(" · ") + Text(last.start, format: .dateTime.weekday(.abbreviated).day().month()))
                                             .font(.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
@@ -894,6 +894,17 @@ struct LogFolderRow: View {
     }
 }
 
+extension Date {
+    /// Formats in the schedule's time zone so a Monday-midnight week start never shows as Sunday.
+    func formatted(_ style: Date.FormatStyle, in timeZoneID: String) -> String {
+        var style = style
+        style.timeZone = TimeZone(identifier: timeZoneID) ?? .current
+        return formatted(style)
+    }
+}
+
+func tripCount(_ n: Int) -> String { n == 1 ? "1 trip" : "\(n) trips" }
+
 /// Trips in the selected financial year and vehicle, shared by the trip log screens.
 @MainActor private func logTrips(_ store: WorkStore, year: Int, vehicleFilter: UUID?) -> [Trip] {
     let span = FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID)
@@ -920,8 +931,8 @@ struct TripLogView: View {
                     let weekTrips = TripCalendar.trips(all, inWeek: week, timeZoneID: tz)
                     let last = TripCalendar.days(inWeek: week, timeZoneID: tz).last ?? week
                     Button { openWeek = week } label: {
-                        LogFolderRow(title: "Week of " + week.formatted(.dateTime.weekday(.abbreviated).day().month()),
-                                     subtitle: "Mon \(week.formatted(.dateTime.day().month())) – Sun \(last.formatted(.dateTime.day().month().year())) · \(weekTrips.count) trips",
+                        LogFolderRow(title: week.formatted(.dateTime.day().month(), in: tz) + " – " + last.formatted(.dateTime.day().month(), in: tz),
+                                     subtitle: "Mon to Sun · " + tripCount(weekTrips.count) + " · " + last.formatted(.dateTime.year(), in: tz),
                                      km: TripCalendar.workKm(weekTrips), count: weekTrips.count, highlight: week == thisWeek ? "This week" : nil)
                     }.buttonStyle(.plain)
                 }
@@ -953,7 +964,7 @@ struct TripWeekView: View {
                 ForEach(days, id: \.self) { day in
                     let dayTrips = TripCalendar.trips(weekTrips, onDay: day, timeZoneID: tz)
                     Button { openDay = day } label: {
-                        LogFolderRow(title: day.formatted(.dateTime.weekday(.wide)), subtitle: day.formatted(.dateTime.day().month(.wide).year()) + (dayTrips.isEmpty ? "" : " · \(dayTrips.count) trips"),
+                        LogFolderRow(title: day.formatted(.dateTime.weekday(.wide), in: tz), subtitle: day.formatted(.dateTime.day().month(.wide).year(), in: tz) + (dayTrips.isEmpty ? "" : " · " + tripCount(dayTrips.count)),
                                      km: TripCalendar.workKm(dayTrips), count: dayTrips.count,
                                      highlight: TripCalendar.calendar(tz).isDateInToday(day) ? "Today" : nil)
                     }.buttonStyle(.plain).disabled(dayTrips.isEmpty)
@@ -961,7 +972,7 @@ struct TripWeekView: View {
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
         .background(Theme.background)
-        .navigationTitle("Mon \(weekStart.formatted(.dateTime.day().month())) – Sun \((days.last ?? weekStart).formatted(.dateTime.day().month()))")
+        .navigationTitle("Mon \(weekStart.formatted(.dateTime.day().month(), in: tz)) – Sun \((days.last ?? weekStart).formatted(.dateTime.day().month(), in: tz))")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $openDay) { TripDayView(day: $0, year: year, vehicleFilter: vehicleFilter) }
         .onAppear {
@@ -983,7 +994,7 @@ struct TripDayView: View {
             LazyVStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(TripCalendar.workKm(dayTrips), format: .number.precision(.fractionLength(1))).font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
-                    Text("work km · \(dayTrips.count) trips").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
+                    Text("work km · " + tripCount(dayTrips.count)).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
                 }.padding(.bottom, 6)
                 if dayTrips.isEmpty { Text("No trips on this day.").foregroundStyle(Theme.textSecondary) }
                 ForEach(dayTrips) { trip in
@@ -995,7 +1006,7 @@ struct TripDayView: View {
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
         .background(Theme.background)
-        .navigationTitle(day.formatted(.dateTime.weekday(.wide).day().month()))
+        .navigationTitle(day.formatted(.dateTime.weekday(.wide).day().month(), in: tz))
         .navigationBarTitleDisplayMode(.inline)
         .alert("Delete this trip?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), presenting: pendingDelete) { trip in
             Button("Delete trip", role: .destructive) { do { try store.deleteTrip(trip.id) } catch { store.error = error.localizedDescription } }
