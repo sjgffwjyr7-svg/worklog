@@ -4,41 +4,48 @@ import VisionKit
 import PDFKit
 import UniformTypeIdentifiers
 
+/// Adds up AUD amounts stored as text, without floating-point rounding.
+func audTotal(_ values: [String]) -> String {
+    let value = values.reduce(Decimal.zero) { $0 + (Decimal(string: $1, locale: Locale(identifier: "en_US_POSIX")) ?? 0) }
+    let formatter = NumberFormatter(); formatter.numberStyle = .currency; formatter.currencyCode = "AUD"; formatter.locale = Locale(identifier: "en_AU")
+    return formatter.string(from: NSDecimalNumber(decimal: value)) ?? "$0.00"
+}
+
+func receiptCount(_ n: Int) -> String { n == 1 ? "1 receipt" : "\(n) receipts" }
+
+/// The Receipts tab: the current financial year by month, with earlier years kept in year folders.
+/// On 1 July the page starts the new year empty; nothing is deleted.
 struct InvoicesView: View {
     @EnvironmentObject var store: WorkStore
-    @State private var pendingDelete: Invoice?
     @State private var adding = false
-    @State private var year = FinancialYear.startYear()
-    var receipts: [Invoice] {
-        let span = FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID)
-        return store.data.invoices.filter { $0.date >= span.start && $0.date < span.end }.sorted { $0.date > $1.date }
-    }
-    var years: [Int] {
-        Array(Set([year, FinancialYear.startYear(), FinancialYear.startYear() - 1] + store.data.invoices.map { FinancialYear.startYear(for: $0.date) })).sorted(by: >)
-    }
-    func sum(_ values: [String]) -> String {
-        let value = values.reduce(Decimal.zero) { $0 + (Decimal(string: $1, locale: Locale(identifier: "en_US_POSIX")) ?? 0) }
-        let formatter = NumberFormatter(); formatter.numberStyle = .currency; formatter.currencyCode = "AUD"; formatter.locale = Locale(identifier: "en_AU")
-        return formatter.string(from: NSDecimalNumber(decimal: value)) ?? "A$0.00"
-    }
+    @State private var openMonth: Date?
+    @State private var openYear: Int?
+    var tz: String { store.data.schedule.timeZoneID }
     var body: some View {
+        let current = FinancialYear.startYear(for: Date(), timeZone: tz)
+        let span = FinancialYear.interval(current, timeZone: tz)
+        let receipts = store.data.invoices.filter { span.contains($0.date) }
+        let months = TripCalendar.monthStarts(receipts.map(\.date), timeZoneID: tz)
+        let otherYears = Set(store.data.invoices.map { FinancialYear.startYear(for: $0.date, timeZone: tz) }).subtracting([current]).sorted(by: >)
+        let thisMonth = TripCalendar.monthStart(of: Date(), timeZoneID: tz)
         NavigationStack {
             List {
                 Section {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            FieldLabel("Total spent · AUD")
+                            FieldLabel("This financial year · AUD")
                             Spacer()
-                            FinancialYearMenu(year: $year, years: years)
+                            StatChip(icon: "calendar", text: "FY \(String(current))–\(String(current + 1).suffix(2))", color: Theme.accent)
                         }
-                        Text(sum(receipts.map { $0.total }))
+                        Text(audTotal(receipts.map { $0.total }))
                             .font(.system(size: 44, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
                             .minimumScaleFactor(0.5).lineLimit(1)
                         HStack(spacing: 10) {
-                            StatChip(icon: "percent", text: "GST \(sum(receipts.map { $0.gst }))", color: Theme.mint)
-                            StatChip(icon: "doc.text.fill", text: "\(receipts.count) receipts", color: Theme.accent)
+                            StatChip(icon: "percent", text: "GST \(audTotal(receipts.map { $0.gst }))", color: Theme.mint)
+                            StatChip(icon: "doc.text.fill", text: receiptCount(receipts.count), color: Theme.accent)
                         }
-                        Text("Includes private and reimbursed purchases. It is not a deduction total.").font(.caption).foregroundStyle(Theme.textTertiary)
+                        Text("1 July \(String(current)) – 30 June \(String(current + 1)). A new year starts fresh on 1 July; earlier years stay in Previous years. Includes private and reimbursed purchases, so it is not a deduction total.")
+                            .font(.caption).foregroundStyle(Theme.textTertiary)
                     }.padding(.vertical, 8)
                 }
                 Section {
@@ -49,23 +56,25 @@ struct InvoicesView: View {
                     ContentUnavailableView("No receipts this year", systemImage: "doc.text.viewfinder", description: Text("Scan a tax invoice into a PDF and keep its supplier, date and amount together."))
                         .listRowBackground(Color.clear)
                 } else {
-                    Section("Receipts") {
-                        ForEach(receipts) { invoice in
-                          HStack(spacing: 10) {
-                            NavigationLink { InvoiceDetailView(initialInvoice: invoice) } label: {
-                                HStack(spacing: 12) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(invoice.supplier).font(.headline).lineLimit(1)
-                                        Text(invoice.category ?? "Uncategorised").font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
-                                        Text(invoice.date, format: .dateTime.weekday(.abbreviated).day().month().hour().minute()).font(.caption2).foregroundStyle(Theme.textTertiary).lineLimit(1)
-                                    }
-                                    Spacer(minLength: 8)
-                                    if let amount = Double(invoice.total) { Text(amount, format: .currency(code: "AUD")).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint) }
-                                }.padding(.vertical, 4)
-                            }
-                            DeleteIconButton { pendingDelete = invoice }
-                          }
-                          .swipeActions { Button(role: .destructive) { pendingDelete = invoice } label: { Label("Delete", systemImage: "trash") } }
+                    Section("This year by month") {
+                        ForEach(months, id: \.self) { month in
+                            let monthReceipts = receiptsIn(TripCalendar.monthInterval(of: month, timeZoneID: tz))
+                            Button { openMonth = month } label: {
+                                LogFolderRow(title: month.formatted(.dateTime.month(.wide).year(), in: tz), subtitle: receiptCount(monthReceipts.count),
+                                             count: monthReceipts.count, highlight: month == thisMonth ? "This month" : nil,
+                                             amount: audTotal(monthReceipts.map { $0.total }), emptyText: "No receipts")
+                            }.buttonStyle(.plain).buttonRow()
+                        }
+                    }
+                }
+                if !otherYears.isEmpty {
+                    Section("Previous years") {
+                        ForEach(otherYears, id: \.self) { year in
+                            let yearReceipts = receiptsIn(FinancialYear.interval(year, timeZone: tz))
+                            Button { openYear = year } label: {
+                                LogFolderRow(title: "FY \(String(year))–\(String(year + 1).suffix(2))", subtitle: "1 July \(String(year)) – 30 June \(String(year + 1)) · " + receiptCount(yearReceipts.count),
+                                             count: yearReceipts.count, amount: audTotal(yearReceipts.map { $0.total }), emptyText: "No receipts")
+                            }.buttonStyle(.plain).buttonRow()
                         }
                     }
                 }
@@ -73,14 +82,173 @@ struct InvoicesView: View {
             .themedForm()
             .navigationTitle("Receipts")
             .sheet(isPresented: $adding) { AddInvoiceView() }
-            .alert("Delete this receipt?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), presenting: pendingDelete) { invoice in
-                Button("Delete receipt", role: .destructive) { do { try store.deleteInvoice(invoice.id) } catch { store.error = error.localizedDescription } }
-                Button("Cancel", role: .cancel) {}
-            } message: { Text($0.deleteSummary) }
-            .onAppear { if DemoMode.flag("-WorklogShowAddReceipt") { adding = true } }
+            .navigationDestination(item: $openMonth) { ReceiptMonthView(month: $0) }
+            .navigationDestination(item: $openYear) { ReceiptYearView(year: $0) }
+            .onAppear {
+                if DemoMode.flag("-WorklogShowAddReceipt") { adding = true }
+                if DemoMode.flag("-WorklogOpenReceiptMonth"), openMonth == nil { openMonth = months.first }
+            }
+        }
+    }
+    func receiptsIn(_ span: DateInterval) -> [Invoice] { store.data.invoices.filter { $0.date >= span.start && $0.date < span.end } }
+}
+
+private struct MoneyHeader: View {
+    let amount: String
+    let caption: String
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(amount).font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary).minimumScaleFactor(0.5).lineLimit(1)
+            Text(caption).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
+        }.padding(.bottom, 6)
+    }
+}
+
+struct ReceiptRow: View {
+    let invoice: Invoice
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(invoice.supplier).font(.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                Text(invoice.category ?? "Uncategorised").font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                Text(invoice.date, format: .dateTime.hour().minute()).font(.caption2).foregroundStyle(Theme.textTertiary)
+            }.layoutPriority(1)
+            Spacer(minLength: 8)
+            if let amount = Double(invoice.total) { Text(amount, format: .currency(code: "AUD")).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint).fixedSize() }
+        }.contentShape(Rectangle())
+    }
+}
+
+/// A previous financial year: its months.
+struct ReceiptYearView: View {
+    @EnvironmentObject var store: WorkStore
+    let year: Int
+    @State private var openMonth: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let span = FinancialYear.interval(year, timeZone: tz)
+        let receipts = store.data.invoices.filter { span.contains($0.date) }
+        let months = TripCalendar.monthStarts(receipts.map(\.date), timeZoneID: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                MoneyHeader(amount: audTotal(receipts.map { $0.total }), caption: receiptCount(receipts.count))
+                ForEach(months, id: \.self) { month in
+                    let m = TripCalendar.monthInterval(of: month, timeZoneID: tz)
+                    let monthReceipts = receipts.filter { $0.date >= m.start && $0.date < m.end }
+                    Button { openMonth = month } label: {
+                        LogFolderRow(title: month.formatted(.dateTime.month(.wide).year(), in: tz), subtitle: receiptCount(monthReceipts.count),
+                                     count: monthReceipts.count, amount: audTotal(monthReceipts.map { $0.total }), emptyText: "No receipts")
+                    }.buttonStyle(.plain)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle("FY \(String(year))–\(String(year + 1).suffix(2))").navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $openMonth) { ReceiptMonthView(month: $0) }
+    }
+}
+
+/// A month's receipts by Monday–Sunday week.
+struct ReceiptMonthView: View {
+    @EnvironmentObject var store: WorkStore
+    let month: Date
+    @State private var openWeek: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let span = TripCalendar.monthInterval(of: month, timeZoneID: tz)
+        let receipts = store.data.invoices.filter { $0.date >= span.start && $0.date < span.end }
+        let weeks = TripCalendar.weekStarts(receipts.map(\.date), timeZoneID: tz)
+        let thisWeek = TripCalendar.weekStart(of: Date(), timeZoneID: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                MoneyHeader(amount: audTotal(receipts.map { $0.total }), caption: receiptCount(receipts.count))
+                ForEach(weeks, id: \.self) { week in
+                    let weekReceipts = receipts.filter { TripCalendar.weekStart(of: $0.date, timeZoneID: tz) == week }
+                    let last = TripCalendar.days(inWeek: week, timeZoneID: tz).last ?? week
+                    let partWeek = !span.contains(week) || !span.contains(last)
+                    Button { openWeek = week } label: {
+                        LogFolderRow(title: week.formatted(.dateTime.day().month(), in: tz) + " – " + last.formatted(.dateTime.day().month(), in: tz),
+                                     subtitle: (partWeek ? "Part week · " : "Mon to Sun · ") + receiptCount(weekReceipts.count),
+                                     count: weekReceipts.count, highlight: week == thisWeek ? "This week" : nil,
+                                     amount: audTotal(weekReceipts.map { $0.total }), emptyText: "No receipts")
+                    }.buttonStyle(.plain)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle(month.formatted(.dateTime.month(.wide).year(), in: tz)).navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $openWeek) { ReceiptWeekView(weekStart: $0, within: span) }
+        .onAppear { if DemoMode.flag("-WorklogOpenReceiptWeek"), openWeek == nil { openWeek = weeks.first } }
+    }
+}
+
+/// A week's days (only those in the month it was opened from).
+struct ReceiptWeekView: View {
+    @EnvironmentObject var store: WorkStore
+    let weekStart: Date
+    let within: DateInterval
+    @State private var openDay: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let cal = TripCalendar.calendar(tz)
+        let receipts = store.data.invoices.filter { $0.date >= within.start && $0.date < within.end && TripCalendar.weekStart(of: $0.date, timeZoneID: tz) == weekStart }
+        let allDays = TripCalendar.days(inWeek: weekStart, timeZoneID: tz)
+        let days = allDays.filter { within.contains($0) }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                MoneyHeader(amount: audTotal(receipts.map { $0.total }), caption: "spent this week")
+                ForEach(days, id: \.self) { day in
+                    let dayReceipts = receipts.filter { cal.isDate($0.date, inSameDayAs: day) }
+                    Button { openDay = day } label: {
+                        LogFolderRow(title: day.formatted(.dateTime.weekday(.wide), in: tz),
+                                     subtitle: day.formatted(.dateTime.day().month(.wide).year(), in: tz) + (dayReceipts.isEmpty ? "" : " · " + receiptCount(dayReceipts.count)),
+                                     count: dayReceipts.count, highlight: cal.isDateInToday(day) ? "Today" : nil,
+                                     amount: audTotal(dayReceipts.map { $0.total }), emptyText: "No receipts")
+                    }.buttonStyle(.plain).disabled(dayReceipts.isEmpty)
+                }
+                if days.count < 7 { Text("The rest of this week is in the next or previous month.").font(.footnote).foregroundStyle(Theme.textTertiary) }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle("Mon \(weekStart.formatted(.dateTime.day().month(), in: tz)) – Sun \((allDays.last ?? weekStart).formatted(.dateTime.day().month(), in: tz))")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $openDay) { ReceiptDayView(day: $0) }
+        .onAppear {
+            if DemoMode.flag("-WorklogOpenReceiptDay"), openDay == nil { openDay = days.last { d in receipts.contains { cal.isDate($0.date, inSameDayAs: d) } } }
         }
     }
 }
+
+/// A day's receipts, each with open and delete.
+struct ReceiptDayView: View {
+    @EnvironmentObject var store: WorkStore
+    let day: Date
+    @State private var pendingDelete: Invoice?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let cal = TripCalendar.calendar(tz)
+        let receipts = store.data.invoices.filter { cal.isDate($0.date, inSameDayAs: day) }.sorted { $0.date < $1.date }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                MoneyHeader(amount: audTotal(receipts.map { $0.total }), caption: receiptCount(receipts.count))
+                if receipts.isEmpty { Text("No receipts on this day.").foregroundStyle(Theme.textSecondary) }
+                ForEach(receipts) { invoice in
+                    HStack(spacing: 10) {
+                        NavigationLink { InvoiceDetailView(initialInvoice: invoice) } label: { ReceiptRow(invoice: invoice) }.buttonStyle(.plain)
+                        DeleteIconButton { pendingDelete = invoice }
+                    }.cardStyle(padding: 14)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle(day.formatted(.dateTime.weekday(.wide).day().month(), in: tz)).navigationBarTitleDisplayMode(.inline)
+        .alert("Delete this receipt?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), presenting: pendingDelete) { invoice in
+            Button("Delete receipt", role: .destructive) { do { try store.deleteInvoice(invoice.id) } catch { store.error = error.localizedDescription } }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text($0.deleteSummary) }
+    }
+}
+
 struct AddInvoiceView: View {
     var existing: Invoice? = nil
     @EnvironmentObject var store: WorkStore

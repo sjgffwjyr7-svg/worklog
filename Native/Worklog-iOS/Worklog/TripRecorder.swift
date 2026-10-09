@@ -14,6 +14,9 @@ import Combine
     private var cooldownUntil = Date.distantPast
     private var timer: Timer?
     private var armed = false
+    /// A scheduled trip finishes after this long without movement, so short stops (parts pickup,
+    /// fuel, a quick site check) stay part of one trip.
+    static let stopFinishSeconds: TimeInterval = 15 * 60
     /// True between continuing a trip and its first new GPS fix, so the stop isn't flagged as a GPS gap.
     private var resuming = false
     init(store: WorkStore) {
@@ -118,7 +121,7 @@ import Combine
     private func checkScheduleEnd() {
         guard let trip = store.data.active, trip.automatic else { return }
         if let end = trip.scheduleEnd, Date() >= end { finish(at: end); return }
-        if let moved = lastMovement, Date().timeIntervalSince(moved) >= 180 { finish(at: moved) }
+        if let moved = lastMovement, Date().timeIntervalSince(moved) >= Self.stopFinishSeconds { finish(at: moved) }
     }
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorization = manager.authorizationStatus
@@ -136,7 +139,7 @@ import Combine
     private func process(_ fix: CLLocation) {
         // Finish an earlier drive before treating movement after a long stop as a new trip.
         if let trip = store.data.active, trip.automatic, let moved = lastMovement,
-           fix.timestamp.timeIntervalSince(moved) >= 180 {
+           fix.timestamp.timeIntervalSince(moved) >= Self.stopFinishSeconds {
             finish(at: moved)
         }
         // Process schedule boundaries even if accuracy is poor.
@@ -189,6 +192,6 @@ import Combine
         store.data.active = trip
         store.save()
         status = "Recording · accuracy ±\(Int(point.accuracy)) m"
-        if trip.automatic, let movement = lastMovement, point.date.timeIntervalSince(movement) >= 180 { finish(at: movement) }
+        if trip.automatic, let movement = lastMovement, point.date.timeIntervalSince(movement) >= Self.stopFinishSeconds { finish(at: movement) }
     }
 }

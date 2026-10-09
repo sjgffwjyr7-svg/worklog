@@ -74,7 +74,8 @@ enum DemoMode {
         store.data.lastTripDescription = "Supply pickup — Bunnings"
         store.data.invoices = [Invoice(supplier: "Bunnings Warehouse", number: "8841", date: now - 0.3 * day, total: "21.48", gst: "1.95", notes: "", category: ExpenseCategories.all[2], pdfFilename: "demo-1.pdf"),
                                Invoice(supplier: "Ampol Dubbo", number: "", date: now - 2 * day, total: "88.14", gst: "8.01", notes: "", category: ExpenseCategories.all[0], pdfFilename: "demo-2.pdf"),
-                               Invoice(supplier: "Telstra", number: "T-2231", date: now - 9 * day, total: "65.00", gst: "5.91", notes: "", category: ExpenseCategories.all[3], pdfFilename: "demo-3.pdf")]
+                               Invoice(supplier: "Telstra", number: "T-2231", date: now - 9 * day, total: "65.00", gst: "5.91", notes: "", category: ExpenseCategories.all[3], pdfFilename: "demo-3.pdf"),
+                               Invoice(supplier: "Repco", number: "R-118", date: now - 200 * day, total: "142.50", gst: "12.95", notes: "", category: ExpenseCategories.all[0], pdfFilename: "demo-4.pdf")]
         store.save()
         return store
     }

@@ -219,6 +219,14 @@ enum TripCalendar {
     static func trips(_ trips: [Trip], within span: DateInterval) -> [Trip] {
         trips.filter { $0.start >= span.start && $0.start < span.end }
     }
+    /// Monday week starts for any dates (used by receipts), newest first.
+    static func weekStarts(_ dates: [Date], timeZoneID: String) -> [Date] {
+        Array(Set(dates.map { weekStart(of: $0, timeZoneID: timeZoneID) })).sorted(by: >)
+    }
+    /// Month starts for any dates (used by receipts), newest first.
+    static func monthStarts(_ dates: [Date], timeZoneID: String) -> [Date] {
+        Array(Set(dates.map { monthStart(of: $0, timeZoneID: timeZoneID) })).sorted(by: >)
+    }
     /// Work kilometres, leaving out trips marked private.
     static func workKm(_ trips: [Trip]) -> Double { trips.filter { $0.excluded != true }.reduce(0) { $0 + $1.km } }
 }

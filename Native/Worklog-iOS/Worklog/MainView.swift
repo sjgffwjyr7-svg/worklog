@@ -536,7 +536,7 @@ struct ScheduleView: View {
                         .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent)).buttonRow()
                 }
                 Section("How recording works") {
-                    Text("Driving is detected from consecutive GPS speeds above about 9 km/h. A trip finishes after about 3 minutes stopped or at shift end. Review trips for personal travel, passengers and GPS gaps.")
+                    Text("Driving is detected from consecutive GPS speeds above about 9 km/h. A scheduled trip finishes after about 15 minutes stopped or at shift end, so short stops stay part of one trip. Trips you start yourself run until you tap Finish. Review trips for personal travel, passengers and GPS gaps.")
                     Text("Choose Always and Precise Location. Avoid force-closing the app and reopen it after a restart. iOS can delay updates, so exact start times and complete coverage are not guaranteed.")
                     Text("Monitoring uses background GPS while enabled, including between shifts. Only in-shift driving points are kept. Turn it off when you don't need it to save battery.")
                 }.font(.subheadline).foregroundStyle(Theme.textSecondary)
@@ -835,9 +835,12 @@ struct TripRow: View {
 struct LogFolderRow: View {
     let title: String
     let subtitle: String
-    let km: Double
+    var km: Double = 0
     let count: Int
     var highlight: String? = nil
+    /// When set (e.g. "$128.40"), shown instead of kilometres — used by the receipt folders.
+    var amount: String? = nil
+    var emptyText = "No trips"
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: count == 0 ? "folder" : "folder.fill").font(.system(size: 18, weight: .semibold))
@@ -851,12 +854,16 @@ struct LogFolderRow: View {
             Spacer(minLength: 8)
             if count > 0 {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(km, format: .number.precision(.fractionLength(1))).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint)
-                    Text("km").font(.caption2).foregroundStyle(Theme.textTertiary)
+                    if let amount {
+                        Text(amount).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint)
+                    } else {
+                        Text(km, format: .number.precision(.fractionLength(1))).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint)
+                        Text("km").font(.caption2).foregroundStyle(Theme.textTertiary)
+                    }
                 }.fixedSize()
                 Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Theme.textTertiary)
             } else {
-                Text("No trips").font(.caption).foregroundStyle(Theme.textTertiary)
+                Text(emptyText).font(.caption).foregroundStyle(Theme.textTertiary)
             }
         }.contentShape(Rectangle()).cardStyle(padding: 14)
     }

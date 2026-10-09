@@ -57,6 +57,12 @@ final class WorklogTests: XCTestCase {
         XCTAssertEqual(julyTrips.count, 2)
         XCTAssertEqual(TripCalendar.workKm(julyTrips), 20, accuracy: 0.001, "Private trips are left out of totals")
     }
+    func testReceiptTotalsAndMonthsGroup() {
+        XCTAssertEqual(audTotal(["21.48", "88.14", "", "0.1", "0.2"]).filter { $0.isNumber || $0 == "." }, "109.92")
+        let dates = ["2026-09-30T09:00:00+08:00", "2026-10-01T09:00:00+08:00", "2026-10-02T09:00:00+08:00"].map { iso.date(from: $0)! }
+        XCTAssertEqual(TripCalendar.monthStarts(dates, timeZoneID: "Australia/Perth"), [iso.date(from: "2026-10-01T00:00:00+08:00")!, iso.date(from: "2026-09-01T00:00:00+08:00")!])
+        XCTAssertEqual(TripCalendar.weekStarts(dates, timeZoneID: "Australia/Perth"), [iso.date(from: "2026-09-28T00:00:00+08:00")!])
+    }
     func testDataRoundTrip() throws {
         var data = WorkData(); data.schedule.enabled = true
         let decoded = try JSONDecoder().decode(WorkData.self, from: JSONEncoder().encode(data))

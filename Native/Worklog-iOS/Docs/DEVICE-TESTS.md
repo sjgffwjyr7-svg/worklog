@@ -12,7 +12,7 @@ Run these after the command's simulator tests pass. Use test records first. Oper
 | Siri update | Set starting odometer for the current trip, confirm, then check the saved value. No completed trip should change. |
 | Scheduled trip | Choose a test weekday/time, vehicle and purpose. Enable Always and Precise Location. Drive during the window with the screen locked; check start, stop and recorded distance. |
 | Outside work hours | Scheduled travel is not saved outside the window. A manually started trip can still be recorded. |
-| Stop / overnight | Test a stop longer than three minutes and an overnight shift; review whether the driving heuristic suits your work. |
+| Stop / overnight | Test a stop shorter and one longer than 15 minutes and an overnight shift; review whether the driving heuristic suits your work. |
 | Permission / GPS loss | Deny location or interrupt GPS. The app should show the problem and flag incomplete distance instead of inventing kilometres. |
 | Restart | Reopen after an interrupted active trip; the old trip is saved with a review flag. Schedule monitoring resumes if enabled and permission allows. Force-close/reboot can interrupt coverage. |
 | Invoice | Scan a legible multipage invoice; enter details/category and save. Replace a scan and check that the displayed PDF changes. Reopen the saved document. |

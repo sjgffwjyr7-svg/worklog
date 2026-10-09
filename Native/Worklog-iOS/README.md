@@ -46,7 +46,7 @@ Signing: https://help.apple.com/xcode/mac/current/en.lproj/dev60b6fbbc7.html
 - Manual start/finish, plus an opt-in work schedule. Default: Monday–Friday, 07:00–17:00, Australia/Perth. It starts disabled.
 - Overnight shifts associated with their starting weekday.
 - Driving detection from two consecutive moving GPS fixes above about 9 km/h. Very short, slow trips or the beginning of a trip may be missed; test and review this heuristic.
-- Trip separation after about three minutes stopped and automatic finish at shift end, processed when the app receives an execution opportunity.
+- Scheduled-trip separation after about 15 minutes stopped and automatic finish at shift end, processed when the app receives an execution opportunity.
 - Financial year dashboard for 1 July–30 June in the selected time zone. GPS segments crossing 1 July are split proportionally by elapsed segment time. A corrected distance crossing a boundary is apportioned by trip duration and needs review.
 - Tax receipt capture using Apple's multipage document scanner, saved as local dated PDFs with a matching per-transaction JSON file. Text is read on the iPhone (Apple Vision) and suggests supplier, items, date, total and GST for you to check and correct before saving. Import an existing photo or PDF the same way.
 - Native share menu for invoice PDF, trip CSV and complete JSON backup. JSON backup includes invoice PDFs. Restore adds missing IDs without overwriting existing records.
