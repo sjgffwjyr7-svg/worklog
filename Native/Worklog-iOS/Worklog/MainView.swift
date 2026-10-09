@@ -874,11 +874,9 @@ struct LogFolderRow: View {
                 .foregroundStyle(count == 0 ? Theme.textTertiary : Theme.accent)
                 .frame(width: 42, height: 42).background((count == 0 ? Theme.field : Theme.accent.opacity(0.14)), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(title).font(.headline).foregroundStyle(count == 0 ? Theme.textTertiary : Theme.textPrimary).lineLimit(1)
-                    if let highlight { StatChip(icon: "star.fill", text: highlight, color: Theme.mint) }
-                }
+                Text(title).font(.headline).foregroundStyle(count == 0 ? Theme.textTertiary : Theme.textPrimary).lineLimit(1)
                 Text(subtitle).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                if let highlight { StatChip(icon: "star.fill", text: highlight, color: Theme.mint).padding(.top, 2) }
             }
             Spacer(minLength: 8)
             if count > 0 {
