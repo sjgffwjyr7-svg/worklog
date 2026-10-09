@@ -37,9 +37,12 @@ struct GPSPoint: Codable {
     var segmentMetres: Double = 0
     var segmentStart: Date? = nil
     init(_ location: CLLocation) {
-        date = location.timestamp; latitude = location.coordinate.latitude
-        longitude = location.coordinate.longitude; accuracy = location.horizontalAccuracy
-        speed = location.speed
+        // Rounded to useful precision (about 10 cm, 0.1 m, 0.1 s) so records stay small and compress well.
+        date = Date(timeIntervalSinceReferenceDate: (location.timestamp.timeIntervalSinceReferenceDate * 10).rounded() / 10)
+        latitude = (location.coordinate.latitude * 1e6).rounded() / 1e6
+        longitude = (location.coordinate.longitude * 1e6).rounded() / 1e6
+        accuracy = (location.horizontalAccuracy * 10).rounded() / 10
+        speed = (location.speed * 10).rounded() / 10
     }
     var location: CLLocation { CLLocation(latitude: latitude, longitude: longitude) }
 }
@@ -68,6 +71,15 @@ struct Trip: Codable, Identifiable {
     var placeReviewed: Bool? = nil
     var metres: Double { points.reduce(0) { $0 + $1.segmentMetres } }
     var km: Double { correctedKm ?? metres / 1000 }
+    /// Adds a GPS point. While parked, the latest stationary point is updated instead of adding
+    /// another one, so long stops don't fill storage; distance only comes from moving points.
+    mutating func addPoint(_ point: GPSPoint) {
+        if point.segmentMetres == 0, points.count >= 2, let last = points.last, last.segmentMetres == 0 {
+            points[points.count - 1] = point
+        } else {
+            points.append(point)
+        }
+    }
     mutating func review(_ reason: String) { if !reviewReasons.contains(reason) { reviewReasons.append(reason) } }
     func km(in interval: DateInterval) -> Double {
         if excluded == true { return 0 }

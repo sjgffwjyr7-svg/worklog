@@ -9,16 +9,28 @@ import Security
     @Published var error: String?
     private(set) var loadFailed = false
     let root: URL
-    var file: URL { root.appendingPathComponent("worklog.json") }
+    /// All records, as LZFSE-compressed JSON.
+    var file: URL { root.appendingPathComponent("worklog.lzfse") }
+    /// Records saved by versions before compression; converted on first launch.
+    var legacyFile: URL { root.appendingPathComponent("worklog.json") }
+    /// The trip being recorded, saved on every GPS update (small, so it's quick and light on battery).
+    var activeFile: URL { root.appendingPathComponent("active-trip.json") }
     init(root directory: URL? = nil) {
         root = directory ?? Self.privateRoot()
         if directory == nil { Self.clearExports() }
         do {
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            var convertLegacy = false
             if FileManager.default.fileExists(atPath: file.path) {
-                data = try JSONDecoder().decode(WorkData.self, from: Data(contentsOf: file))
-                guard data.schemaVersion == 1 else { throw StoreError.invalidBackup }
+                data = try JSONDecoder().decode(WorkData.self, from: Self.decompress(Data(contentsOf: file)))
+            } else if FileManager.default.fileExists(atPath: legacyFile.path) {
+                data = try JSONDecoder().decode(WorkData.self, from: Data(contentsOf: legacyFile))
+                convertLegacy = true
             }
+            guard data.schemaVersion == 1 else { throw StoreError.invalidBackup }
+            loadActiveTrip()
+            // Convert once to the compressed format; the old file is removed only after the new one is saved.
+            if convertLegacy, save() { try? FileManager.default.removeItem(at: legacyFile) }
         } catch { loadFailed = true; self.error = "Could not open your saved records. Nothing has been overwritten. \(error.localizedDescription)" }
         if !loadFailed { migrateVehicles(); protectReceiptFiles() }
     }
@@ -51,7 +63,7 @@ import Security
     private func protectReceiptFiles() {
         let fm = FileManager.default
         guard let files = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return }
-        for file in files where file.lastPathComponent != "worklog.json" && ["pdf", "json"].contains(file.pathExtension.lowercased()) {
+        for file in files where !["worklog.json", "active-trip.json"].contains(file.lastPathComponent) && ["pdf", "json"].contains(file.pathExtension.lowercased()) {
             try? fm.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: file.path)
         }
     }
@@ -285,10 +297,38 @@ import Security
     @discardableResult func save() -> Bool {
         guard !loadFailed else { error = "Records could not be loaded. Restart the app or recover the original files using Files."; return false }
         do {
-            let bytes = try JSONEncoder().encode(data)
+            let bytes = try Self.compress(JSONEncoder().encode(data))
             try bytes.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            // The full file now holds the latest state, so the separate active-trip file isn't needed.
+            if data.active == nil { try? FileManager.default.removeItem(at: activeFile) } else { saveActive() }
             return true
         } catch { self.error = "Records have not been saved. Keep the app open and free device storage. \(error.localizedDescription)"; return false }
+    }
+    /// Saves only the recording trip. Used on every GPS update instead of rewriting all records.
+    @discardableResult func saveActive() -> Bool {
+        guard !loadFailed, let active = data.active else { return false }
+        do {
+            try JSONEncoder().encode(active).write(to: activeFile, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            return true
+        } catch { self.error = "The recording trip was not saved. Free device storage. \(error.localizedDescription)"; return false }
+    }
+    /// The active-trip file can be newer than the main file (it's saved more often). Use it when it is.
+    private func loadActiveTrip() {
+        guard let bytes = try? Data(contentsOf: activeFile), let trip = try? JSONDecoder().decode(Trip.self, from: bytes) else { return }
+        if data.trips.contains(where: { $0.id == trip.id }) { try? FileManager.default.removeItem(at: activeFile); return }
+        if data.active == nil || data.active?.id == trip.id && trip.points.count >= (data.active?.points.count ?? 0) { data.active = trip }
+    }
+    nonisolated static func compress(_ bytes: Data) throws -> Data { try (bytes as NSData).compressed(using: .lzfse) as Data }
+    nonisolated static func decompress(_ bytes: Data) throws -> Data { try (bytes as NSData).decompressed(using: .lzfse) as Data }
+    /// Space used by records and receipts on this iPhone.
+    func storageUsed() -> (records: Int64, receipts: Int64) {
+        let fm = FileManager.default
+        var records: Int64 = 0, receipts: Int64 = 0
+        for url in (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.fileSizeKey])) ?? [] {
+            let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+            if [file, legacyFile, activeFile].map(\.lastPathComponent).contains(url.lastPathComponent) { records += size } else { receipts += size }
+        }
+        return (records, receipts)
     }
     var lastTripDescription: String {
         data.lastTripDescription ?? data.trips.filter { $0.excluded != true }.max(by: { $0.start < $1.start })?.purpose ?? ""
@@ -349,7 +389,7 @@ import Security
         let stamp = ISO8601DateFormatter().string(from: Date()).prefix(10)
         if let password {
             guard password.count >= 8 else { throw StoreError.weakPassword }
-            bytes = try BackupCrypto.seal(bytes, password: password)
+            bytes = try BackupCrypto.seal(Self.compress(bytes), password: password, compression: "lzfse")
         }
         let url = try exportURL("Worklog-backup-\(stamp)\(password == nil ? "" : "-encrypted").json")
         try bytes.write(to: url, options: [.atomic, .completeFileProtection])
@@ -507,6 +547,8 @@ enum BackupCrypto {
         var format = BackupCrypto.format
         var version = 1
         var kdf = "PBKDF2-HMAC-SHA256"
+        /// "lzfse" when the backup was compressed before encryption (smaller files).
+        var compression: String? = nil
         var rounds: UInt32
         var salt: Data
         var sealed: Data
@@ -525,12 +567,12 @@ enum BackupCrypto {
         guard status == kCCSuccess else { throw StoreError.invalidBackup }
         return SymmetricKey(data: derived)
     }
-    static func seal(_ plain: Data, password: String) throws -> Data {
+    static func seal(_ plain: Data, password: String, compression: String? = nil) throws -> Data {
         var salt = Data(count: 16)
         let ok = salt.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 16, $0.baseAddress!) }
         guard ok == errSecSuccess else { throw StoreError.unavailable }
         guard let combined = try AES.GCM.seal(plain, using: key(password, salt: salt, rounds: rounds)).combined else { throw StoreError.unavailable }
-        return try JSONEncoder().encode(Envelope(rounds: rounds, salt: salt, sealed: combined))
+        return try JSONEncoder().encode(Envelope(compression: compression, rounds: rounds, salt: salt, sealed: combined))
     }
     static func isEncrypted(_ bytes: Data) -> Bool {
         (try? JSONDecoder().decode(Envelope.self, from: bytes))?.format == format
@@ -538,7 +580,11 @@ enum BackupCrypto {
     static func open(_ bytes: Data, password: String) throws -> Data {
         let envelope = try JSONDecoder().decode(Envelope.self, from: bytes)
         guard envelope.format == format, envelope.version == 1, (100_000...5_000_000).contains(envelope.rounds), envelope.salt.count >= 16 else { throw StoreError.invalidBackup }
-        do { return try AES.GCM.open(AES.GCM.SealedBox(combined: envelope.sealed), using: key(password, salt: envelope.salt, rounds: envelope.rounds)) }
+        let plain: Data
+        do { plain = try AES.GCM.open(AES.GCM.SealedBox(combined: envelope.sealed), using: key(password, salt: envelope.salt, rounds: envelope.rounds)) }
         catch { throw StoreError.wrongPassword }
+        guard let compression = envelope.compression else { return plain }
+        guard compression == "lzfse" else { throw StoreError.invalidBackup }
+        return try WorkStore.decompress(plain)
     }
 }

@@ -181,17 +181,18 @@ import Combine
         if let previous = anchor {
             let dt = point.date.timeIntervalSince(previous.date), metres = point.location.distance(from: previous.location)
             guard dt > 0 else { return }
-            if metres / dt > 55 { trip.review("Implausible GPS jump ignored"); store.data.active = trip; store.save(); return }
+            if metres / dt > 55 { trip.review("Implausible GPS jump ignored"); store.data.active = trip; store.saveActive(); return }
             let threshold = max(8, min(20, (point.accuracy + previous.accuracy) / 4))
             if metres >= threshold {
-                point.segmentMetres = metres; point.segmentStart = previous.date
+                point.segmentMetres = (metres * 100).rounded() / 100; point.segmentStart = previous.date
                 anchor = point; lastMovement = point.date
             }
         } else { anchor = point; lastMovement = point.date }
         resuming = false
-        trip.points.append(point)
+        trip.addPoint(point)
         store.data.active = trip
-        store.save()
+        // Only the recording trip is written on each GPS update; the full history is saved when it finishes.
+        store.saveActive()
         status = "Recording · accuracy ±\(Int(point.accuracy)) m"
         if trip.automatic, let movement = lastMovement, point.date.timeIntervalSince(movement) >= Self.stopFinishSeconds { finish(at: movement) }
     }

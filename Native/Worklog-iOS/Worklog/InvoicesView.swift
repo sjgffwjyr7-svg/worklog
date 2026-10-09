@@ -345,7 +345,7 @@ struct AddInvoiceView: View {
                     let bytes = try Data(contentsOf: url)
                     guard bytes.count <= 50 * 1024 * 1024 else { error = "Use a file smaller than 50 MB."; return }
                     if let document = PDFDocument(data: bytes), document.pageCount > 0 { pdf = bytes }
-                    else if let image = UIImage(data: bytes), let page = PDFPage(image: image) { let document = PDFDocument(); document.insert(page, at: 0); pdf = document.dataRepresentation() }
+                    else if let image = UIImage(data: bytes), let compressed = ReceiptCompression.pdf(from: [image]) { pdf = compressed }
                     else { error = "This photo or PDF could not be opened."; return }
                     if let pdf { recognize(pdf) }
                 } catch { self.error = error.localizedDescription }
@@ -493,6 +493,10 @@ struct StorageView: View {
                 Section("On this iPhone") {
                     LabeledContent("Work trips", value: "\(store.data.trips.count)")
                     LabeledContent("Invoices", value: "\(store.data.invoices.count)")
+                    let used = store.storageUsed()
+                    LabeledContent("Storage used", value: ByteCountFormatter.string(fromByteCount: used.records + used.receipts, countStyle: .file))
+                    Text("Trip records \(ByteCountFormatter.string(fromByteCount: used.records, countStyle: .file)) (compressed) · receipts \(ByteCountFormatter.string(fromByteCount: used.receipts, countStyle: .file))")
+                        .font(.caption).foregroundStyle(Theme.textTertiary)
                     Text("Records and scanned receipts are kept in Worklog's private, encrypted storage on this iPhone. They can't be browsed from the Files app or a computer. No records expire automatically. Keep dated encrypted backups on your QNAP and another device for the period your accountant requires. Deleting the app removes local records.").font(.subheadline)
                 }
                 Section {

@@ -20,16 +20,43 @@ struct InvoiceScanner: UIViewControllerRepresentable {
         func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFailWithError error: Error) { parent.failed(error.localizedDescription) }
         func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFinishWith scan: VNDocumentCameraScan) {
             guard scan.pageCount > 0 else { parent.cancelled(); return }
-            let document = PDFDocument()
-            for index in 0..<scan.pageCount {
-                guard let page = PDFPage(image: scan.imageOfPage(at: index)) else { parent.failed("Could not create an invoice page. Try scanning again."); return }
-                document.insert(page, at: index)
-            }
-            guard let bytes = document.dataRepresentation() else { parent.failed("Could not save the scan. Try again."); return }
+            let pages = (0..<scan.pageCount).map { scan.imageOfPage(at: $0) }
+            guard let bytes = ReceiptCompression.pdf(from: pages) else { parent.failed("Could not save the scan. Try again."); return }
             parent.completed(bytes)
         }
     }
 }
+/// Scanned receipts are stored as compressed JPEG pages inside a PDF: pages are scaled to at most
+/// 2,000 pixels on the long side (sharp enough to read and for text recognition) and JPEG-compressed.
+/// A typical page drops from 1–3 MB to roughly 150–300 KB.
+enum ReceiptCompression {
+    static let maxPixels: CGFloat = 2000
+    static let jpegQuality: CGFloat = 0.6
+    /// 200 pixels per inch on the page, so a 2,000-pixel receipt prints at about 25 cm.
+    static let pointsPerPixel: CGFloat = 72 / 200
+    static func compressedPage(_ image: UIImage) -> UIImage? {
+        let pixelWidth = image.size.width * image.scale, pixelHeight = image.size.height * image.scale
+        guard pixelWidth > 0, pixelHeight > 0 else { return nil }
+        let factor = min(1, maxPixels / max(pixelWidth, pixelHeight))
+        let target = CGSize(width: (pixelWidth * factor).rounded(), height: (pixelHeight * factor).rounded())
+        let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
+        let resized = UIGraphicsImageRenderer(size: target, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: target)) }
+        // Re-reading the JPEG lets the PDF embed the compressed bytes as they are.
+        return resized.jpegData(compressionQuality: jpegQuality).flatMap { UIImage(data: $0) }
+    }
+    static func pdf(from images: [UIImage]) -> Data? {
+        let pages = images.compactMap(compressedPage)
+        guard !pages.isEmpty, pages.count == images.count else { return nil }
+        return UIGraphicsPDFRenderer(bounds: .zero).pdfData { context in
+            for page in pages {
+                let rect = CGRect(x: 0, y: 0, width: page.size.width * pointsPerPixel, height: page.size.height * pointsPerPixel)
+                context.beginPage(withBounds: rect, pageInfo: [:])
+                page.draw(in: rect)
+            }
+        }
+    }
+}
+
 struct PDFPreview: UIViewRepresentable {
     let data: Data
     func makeUIView(context: Context) -> PDFView { let view = PDFView(); view.autoScales = true; view.document = PDFDocument(data: data); return view }

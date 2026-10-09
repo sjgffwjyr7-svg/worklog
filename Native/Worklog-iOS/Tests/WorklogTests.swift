@@ -1,4 +1,6 @@
 import XCTest
+import PDFKit
+import UIKit
 import CoreLocation
 @testable import Worklog
 
@@ -429,6 +431,65 @@ final class ReceiptTests: XCTestCase {
         XCTAssertTrue(csv.contains("75.0%")); XCTAssertTrue(csv.contains("Toyota")); XCTAssertTrue(csv.contains("2.8 L"))
         let trips = try String(contentsOf: store.csvExport(year: year), encoding: .utf8)
         XCTAssertTrue(trips.contains("\"Business\"")); XCTAssertTrue(trips.contains("\"Private\"")); XCTAssertTrue(trips.contains("1500.0"))
+    }
+    @MainActor func testRecordsAreStoredCompressedAndOldFileIsConverted() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var data = WorkData()
+        var trip = Trip(purpose: "Long drive", vehicle: "", start: Date(), end: Date().addingTimeInterval(3600), automatic: false, timeZoneID: "Australia/Perth")
+        for i in 0..<2000 {
+            var p = GPSPoint(CLLocation(latitude: -32.25 + Double(i) * 0.0001, longitude: 148.6 + Double(i) * 0.0001))
+            p.segmentMetres = 14.2; trip.points.append(p)
+        }
+        data.trips = [trip]
+        let json = try JSONEncoder().encode(data)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try json.write(to: root.appendingPathComponent("worklog.json"))
+        let store = WorkStore(root: root)
+        XCTAssertFalse(store.loadFailed)
+        XCTAssertEqual(store.data.trips.first?.points.count, 2000)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.legacyFile.path), "Old uncompressed file removed after conversion")
+        let compressed = try Data(contentsOf: store.file)
+        XCTAssertLessThan(compressed.count, json.count / 3, "Compressed records should be far smaller than plain JSON")
+        XCTAssertEqual(WorkStore(root: root).data.trips.first?.points.count, 2000)
+    }
+    @MainActor func testRecordingTripSavesSeparatelyAndParkedPointsCollapse() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorkStore(root: root)
+        var trip = Trip(purpose: "Pickup", vehicle: "", start: Date(), automatic: false, timeZoneID: "Australia/Perth")
+        store.data.active = trip
+        XCTAssertTrue(store.save())
+        let base = Date()
+        for i in 0..<10 { var p = GPSPoint(CLLocation(latitude: -32.25, longitude: 148.6)); p.date = base.addingTimeInterval(Double(i) * 5); trip.addPoint(p) }
+        XCTAssertEqual(trip.points.count, 2, "Parked: first point kept, latest stationary point updated")
+        XCTAssertEqual(trip.points.last?.date, base.addingTimeInterval(45))
+        var moving = GPSPoint(CLLocation(latitude: -32.26, longitude: 148.6)); moving.segmentMetres = 1100; moving.date = base.addingTimeInterval(60)
+        trip.addPoint(moving)
+        XCTAssertEqual(trip.points.count, 3)
+        store.data.active = trip
+        XCTAssertTrue(store.saveActive())
+        XCTAssertEqual(WorkStore(root: root).data.active?.points.count, 3, "Latest GPS points survive an app restart")
+        store.data.active = nil; trip.end = Date(); store.data.trips = [trip]
+        XCTAssertTrue(store.save())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.activeFile.path))
+        XCTAssertNil(WorkStore(root: root).data.active)
+    }
+    func testScannedReceiptPagesAreCompressed() throws {
+        let format = UIGraphicsImageRendererFormat(); format.scale = 1
+        let photo = UIGraphicsImageRenderer(size: CGSize(width: 3024, height: 4032), format: format).image { ctx in
+            UIColor.white.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 3024, height: 4032))
+            for row in 0..<80 {
+                ("Item \(row)  Bolts M8 x 40 zinc  qty 4   $\(row).95" as NSString)
+                    .draw(at: CGPoint(x: 120, y: 120 + row * 48), withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 36, weight: .regular), .foregroundColor: UIColor.black])
+            }
+        }
+        let pdf = try XCTUnwrap(ReceiptCompression.pdf(from: [photo, photo]))
+        let document = try XCTUnwrap(PDFDocument(data: pdf))
+        XCTAssertEqual(document.pageCount, 2)
+        XCTAssertLessThan(pdf.count, 1_200_000, "Two scanned pages should be well under 600 KB each")
+        let plain = PDFDocument(); plain.insert(try XCTUnwrap(PDFPage(image: photo)), at: 0)
+        XCTAssertLessThan(pdf.count / 2, try XCTUnwrap(plain.dataRepresentation()).count, "Smaller than the old full-resolution page")
     }
     @MainActor func testDeletingTripAndReceiptIsPermanent() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
