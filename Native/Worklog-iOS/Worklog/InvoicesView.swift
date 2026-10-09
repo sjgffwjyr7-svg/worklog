@@ -466,6 +466,21 @@ struct StorageView: View {
                 Section {
                     DropdownField(label: "Financial year", selection: $exportYear, options: exportYears,
                                   title: { "FY \(String($0))–\(String($0 + 1).suffix(2)) · 1 July \(String($0)) – 30 June \(String($0 + 1))" }).padding(.vertical, 6)
+                    let checklist = store.atoChecklist(year: exportYear)
+                    if checklist.isEmpty {
+                        Label("ATO record check: nothing missing", systemImage: "checkmark.seal.fill").foregroundStyle(Theme.mint)
+                    } else {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("ATO record check: \(checklist.count) to fix", systemImage: "exclamationmark.triangle.fill").font(.headline).foregroundStyle(Theme.warning)
+                            ForEach(checklist, id: \.self) { item in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("•").foregroundStyle(Theme.warning)
+                                    Text(item).font(.footnote).foregroundStyle(Theme.textSecondary)
+                                }
+                            }
+                            Text("Fix vehicle details in Settings → Vehicles and odometer readings in each trip.").font(.caption).foregroundStyle(Theme.textTertiary)
+                        }.padding(.vertical, 4)
+                    }
                     Button { do { share = ShareFiles(urls: try store.accountantExport(year: exportYear)) } catch { store.error = error.localizedDescription } } label: {
                         Label("Export for accountant", systemImage: "square.and.arrow.up")
                     }.buttonStyle(PrimaryButtonStyle()).buttonRow()

@@ -104,9 +104,10 @@ import Combine
         configure(); status = "Continuing \(trip.purpose) · finding GPS…"
         return true
     }
-    func finish(at date: Date = Date(), reason: String? = nil, cooldown: Bool = false) {
+    func finish(at date: Date = Date(), reason: String? = nil, cooldown: Bool = false, odometerEnd: Double? = nil) {
         guard var trip = store.data.active else { return }
         trip.end = max(trip.start, date)
+        if let odometerEnd { trip.odometerEnd = odometerEnd }
         if trip.points.isEmpty { trip.review("No usable GPS positions; distance needs review") }
         if let last = trip.points.last, date.timeIntervalSince(last.date) > 60 { trip.review("GPS missing near trip end") }
         if let reason { trip.review(reason) }

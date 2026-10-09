@@ -182,6 +182,8 @@ struct DashboardView: View {
     @State private var addingVehicle = false
     @State private var addingVehicleFromStart = false
     @State private var odometerWarning: OdometerCheck?
+    @State private var finishing = false
+    @State private var finishOdometer = ""
     @State private var openTripLog = false
     var trips: [Trip] { store.data.trips.sorted { $0.start > $1.start } }
     var thisWeekTrips: [Trip] {
@@ -229,12 +231,51 @@ struct DashboardView: View {
             .toolbarBackground(Theme.background, for: .navigationBar)
             .sheet(isPresented: $starting) { startSheet }
             .sheet(isPresented: $addingVehicle) { VehicleEditorView(existing: nil) }
+            .sheet(isPresented: $finishing) { finishSheet }
             .navigationDestination(isPresented: $openTripLog) { TripLogView() }
             .onAppear {
                 if DemoMode.flag("-WorklogShowStart") { purpose = store.lastTripDescription; starting = true }
                 if DemoMode.flag("-WorklogOpenTripLog") { openTripLog = true }
             }
         }
+    }
+
+    /// Asks for the finishing odometer, which the ATO logbook needs for every journey.
+    var finishSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if let trip = store.data.active {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(trip.metres / 1000, format: .number.precision(.fractionLength(1))).font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
+                            Text("km by GPS").font(.headline).foregroundStyle(Theme.mint)
+                        }
+                        Text(trip.purpose + (trip.vehicle.isEmpty ? "" : " · " + trip.vehicle)).font(.subheadline).foregroundStyle(Theme.textSecondary)
+                        if let start = trip.odometerStart { Text("Starting odometer " + start.formatted(.number.precision(.fractionLength(0))) + " km").font(.subheadline).foregroundStyle(Theme.textSecondary) }
+                    }
+                    ThemedTextField(label: "Finishing odometer (km)", prompt: "Read it from the dashboard", text: $finishOdometer, keyboard: .decimalPad)
+                    Text("The ATO logbook needs the odometer at the start and end of each journey. The suggested number is the start reading plus the GPS distance — check it against your dashboard.")
+                        .font(.footnote).foregroundStyle(Theme.textSecondary)
+                    Button {
+                        let clean = finishOdometer.replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces)
+                        var reading: Double?
+                        if !clean.isEmpty {
+                            guard let value = Double(clean), value.isFinite, value >= 0 else { store.error = "Enter the finishing odometer in kilometres."; return }
+                            if let start = store.data.active?.odometerStart, value < start { store.error = "The finishing odometer can't be lower than the starting odometer."; return }
+                            reading = value
+                        }
+                        recorder.finish(cooldown: true, odometerEnd: reading)
+                        finishing = false
+                    } label: { Label("Finish & save trip", systemImage: "stop.fill") }
+                        .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.danger), foreground: .white))
+                }.padding(20)
+            }
+            .background(Theme.background)
+            .navigationTitle("Finish trip").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Keep recording") { finishing = false } } }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationBackground(Theme.background)
     }
 
     /// Starts a manual trip, first checking that the odometer suits the chosen vehicle.
@@ -271,7 +312,11 @@ struct DashboardView: View {
                         Text("Starting odometer \(odometer, format: .number.precision(.fractionLength(0...1))) km").font(.subheadline).foregroundStyle(Theme.textSecondary)
                     }
                 }
-                Button { recorder.finish(cooldown: true) } label: { Label("Finish & save trip", systemImage: "stop.fill") }
+                Button {
+                    // Suggest start odometer + GPS distance; the driver checks it against the dashboard.
+                    finishOdometer = trip.odometerStart.map { String(format: "%.0f", ($0 + trip.metres / 1000).rounded()) } ?? ""
+                    finishing = true
+                } label: { Label("Finish & save trip", systemImage: "stop.fill") }
                     .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.danger), foreground: .white))
             } else {
                 HStack {
@@ -318,7 +363,7 @@ struct DashboardView: View {
                         }
                     }
                     TripDescriptionField(purpose: $purpose)
-                    ThemedTextField(label: "Starting odometer (km)", prompt: "Optional — e.g. 128450", text: $startingOdometer, keyboard: .decimalPad)
+                    ThemedTextField(label: "Starting odometer (km)", prompt: store.currentVehicle.flatMap { store.lastOdometer(for: $0.id) }.map { "Last recorded " + $0.formatted(.number.precision(.fractionLength(0))) + " km" } ?? "Needed for the ATO logbook — e.g. 128450", text: $startingOdometer, keyboard: .decimalPad)
                     Label("Your last description is ready for the next trip. Manual trips count as work trips, including outside scheduled hours.", systemImage: "info.circle")
                         .font(.footnote).foregroundStyle(Theme.textSecondary)
                     Button { attemptStart() } label: { Label("Start recording", systemImage: "play.fill") }
@@ -605,17 +650,58 @@ struct VehicleEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var registration = ""
+    @State private var make = ""
+    @State private var model = ""
+    @State private var engine = ""
     @State private var odometer = ""
+    @State private var hasLogbook = false
+    @State private var logbookStart = Date()
+    @State private var logbookEnd = Date().addingTimeInterval(84 * 86400)
+    @State private var logbookStartOdo = ""
+    @State private var logbookEndOdo = ""
+    @State private var year = FinancialYear.startYear()
+    @State private var yearStartOdo = ""
+    @State private var yearEndOdo = ""
     @State private var error: String?
+    var weeks: Double { logbookEnd.timeIntervalSince(logbookStart) / (7 * 86400) }
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     ThemedTextField(label: "Vehicle name", prompt: "e.g. Hilux, Work ute", text: $name)
-                    ThemedTextField(label: "Registration", prompt: "Optional — e.g. 1ABC234", text: $registration)
-                    ThemedTextField(label: "Current odometer (km)", prompt: "Optional — helps spot the wrong vehicle", text: $odometer, keyboard: .decimalPad)
-                    Text("Worklog compares each starting odometer with every vehicle's last reading and asks if it looks like you're in a different vehicle.")
+                    HStack(spacing: 12) {
+                        ThemedTextField(label: "Make", prompt: "e.g. Toyota", text: $make)
+                        ThemedTextField(label: "Model", prompt: "e.g. Hilux SR5", text: $model)
+                    }
+                    HStack(spacing: 12) {
+                        ThemedTextField(label: "Engine capacity", prompt: "e.g. 2.8 L", text: $engine)
+                        ThemedTextField(label: "Registration", prompt: "e.g. 1ABC234", text: $registration)
+                    }
+                    ThemedTextField(label: "Current odometer (km)", prompt: "Helps spot the wrong vehicle", text: $odometer, keyboard: .decimalPad)
+
+                    Text("ATO LOGBOOK PERIOD").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(Theme.accent).padding(.top, 8)
+                    Toggle("I'm keeping a logbook period", isOn: $hasLogbook).tint(Theme.accent)
+                    if hasLogbook {
+                        DatePicker("Starts", selection: $logbookStart, displayedComponents: .date)
+                        DatePicker("Ends", selection: $logbookEnd, in: logbookStart..., displayedComponents: .date)
+                        HStack(spacing: 12) {
+                            ThemedTextField(label: "Odometer at start", prompt: "km", text: $logbookStartOdo, keyboard: .decimalPad)
+                            ThemedTextField(label: "Odometer at end", prompt: "km", text: $logbookEndOdo, keyboard: .decimalPad)
+                        }
+                        Label(String(format: "%.1f weeks", weeks) + (weeks < WorkStore.logbookMinimumWeeks ? " — must be at least 12 continuous weeks" : ""),
+                              systemImage: weeks < WorkStore.logbookMinimumWeeks ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                            .font(.footnote).foregroundStyle(weeks < WorkStore.logbookMinimumWeeks ? Theme.warning : Theme.mint)
+                    }
+                    Text("Record every trip, business and private, during a representative 12-week period. Your business-use percentage is the work km divided by the total km shown by the odometer readings. A logbook is valid for 5 years unless your driving changes.")
                         .font(.footnote).foregroundStyle(Theme.textSecondary)
+
+                    Text("FINANCIAL YEAR ODOMETER").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(Theme.accent).padding(.top, 8)
+                    DropdownField(label: "Financial year", selection: $year, options: Array((FinancialYear.startYear() - 5...FinancialYear.startYear()).reversed()),
+                                  title: { "FY \(String($0))–\(String($0 + 1).suffix(2))" })
+                    HStack(spacing: 12) {
+                        ThemedTextField(label: "On 1 July \(String(year))", prompt: "km", text: $yearStartOdo, keyboard: .decimalPad)
+                        ThemedTextField(label: "On 30 June \(String(year + 1))", prompt: "km", text: $yearEndOdo, keyboard: .decimalPad)
+                    }
                     if let error { Label(error, systemImage: "exclamationmark.circle.fill").font(.subheadline).foregroundStyle(Theme.warning) }
                     Button { save() } label: { Label("Save vehicle", systemImage: "checkmark") }
                         .buttonStyle(PrimaryButtonStyle())
@@ -626,21 +712,50 @@ struct VehicleEditorView: View {
             .navigationTitle(existing == nil ? "Add vehicle" : "Edit vehicle").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .onAppear {
-                guard let existing else { return }
-                name = existing.name; registration = existing.registration
-                odometer = existing.startingOdometer.map { String($0) } ?? ""
+                guard let v = existing else { loadYear(); return }
+                name = v.name; registration = v.registration; make = v.make ?? ""; model = v.model ?? ""; engine = v.engineCapacity ?? ""
+                odometer = v.startingOdometer.map { String(format: "%.0f", $0) } ?? ""
+                if let start = v.logbookStart { hasLogbook = true; logbookStart = start; logbookEnd = v.logbookEnd ?? start.addingTimeInterval(84 * 86400) }
+                logbookStartOdo = v.logbookStartOdometer.map { String(format: "%.0f", $0) } ?? ""
+                logbookEndOdo = v.logbookEndOdometer.map { String(format: "%.0f", $0) } ?? ""
+                loadYear()
             }
+            .onChange(of: year) { _, _ in loadYear() }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
         .presentationBackground(Theme.background)
     }
+    func loadYear() {
+        let reading = existing?.yearOdometers?[String(year)]
+        yearStartOdo = reading?.start.map { String(format: "%.0f", $0) } ?? ""
+        yearEndOdo = reading?.end.map { String(format: "%.0f", $0) } ?? ""
+    }
+    /// Empty text is nil; anything else must be a non-negative number.
+    func reading(_ text: String) -> Double?? {
+        let clean = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "")
+        if clean.isEmpty { return .some(nil) }
+        guard let value = Double(clean), value.isFinite, value >= 0 else { return nil }
+        return .some(value)
+    }
     func save() {
-        let reading = Double(odometer)
-        if !odometer.isEmpty && (reading == nil || !(reading?.isFinite ?? false) || (reading ?? -1) < 0) { error = "Enter a valid odometer in kilometres."; return }
+        guard let current = reading(odometer), let lbStart = reading(logbookStartOdo), let lbEnd = reading(logbookEndOdo),
+              let fyStart = reading(yearStartOdo), let fyEnd = reading(yearEndOdo) else { error = "Enter odometer readings as numbers of kilometres."; return }
+        if let a = lbStart, let b = lbEnd, b < a { error = "The logbook end odometer can't be lower than the start."; return }
+        if let a = fyStart, let b = fyEnd, b < a { error = "The 30 June odometer can't be lower than 1 July."; return }
         var vehicle = existing ?? Vehicle(name: "")
         vehicle.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         vehicle.registration = registration.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        vehicle.startingOdometer = reading
+        vehicle.make = make.trimmingCharacters(in: .whitespacesAndNewlines)
+        vehicle.model = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        vehicle.engineCapacity = engine.trimmingCharacters(in: .whitespacesAndNewlines)
+        vehicle.startingOdometer = current
+        vehicle.logbookStart = hasLogbook ? logbookStart : nil
+        vehicle.logbookEnd = hasLogbook ? logbookEnd : nil
+        vehicle.logbookStartOdometer = hasLogbook ? lbStart : nil
+        vehicle.logbookEndOdometer = hasLogbook ? lbEnd : nil
+        var years = vehicle.yearOdometers ?? [:]
+        years[String(year)] = YearOdometer(start: fyStart, end: fyEnd)
+        vehicle.yearOdometers = years
         guard store.saveVehicle(vehicle, makeCurrent: existing == nil) else { error = "The vehicle was not saved. Check device storage."; return }
         WorklogShortcuts.updateAppShortcutParameters()
         dismiss()

@@ -63,6 +63,67 @@ import Security
         return Self.exportFolder.appendingPathComponent(name)
     }
 
+    // MARK: ATO logbook
+
+    /// The ATO logbook must cover at least 12 continuous weeks.
+    static let logbookMinimumWeeks = 12.0
+    /// Australian rule for when a supplier's tax invoice (with ABN) is needed.
+    static let taxInvoiceThreshold = Decimal(string: "82.50")!
+    func setYearOdometer(vehicleID: UUID, year: Int, _ reading: YearOdometer) -> Bool {
+        guard var vehicle = vehicle(vehicleID) else { return false }
+        var readings = vehicle.yearOdometers ?? [:]
+        readings[String(year)] = reading
+        vehicle.yearOdometers = readings
+        return saveVehicle(vehicle)
+    }
+    func logbookSummary(_ vehicle: Vehicle, year: Int) -> LogbookSummary {
+        let tz = data.schedule.timeZoneID
+        let fy = FinancialYear.interval(year, timeZone: tz)
+        let trips = data.trips.filter { $0.vehicleID == vehicle.id }
+        var issues: [String] = []
+        if vehicle.registration.isEmpty { issues.append("\(vehicle.name): add the registration number.") }
+        if (vehicle.make ?? "").isEmpty || (vehicle.model ?? "").isEmpty { issues.append("\(vehicle.name): add the make and model.") }
+        if (vehicle.engineCapacity ?? "").isEmpty { issues.append("\(vehicle.name): add the engine capacity.") }
+        var weeks: Double?, logbookTotal: Double?, logbookBusiness = 0.0, percent: Double?
+        if let start = vehicle.logbookStart, let end = vehicle.logbookEnd, end > start {
+            weeks = end.timeIntervalSince(start) / (7 * 86400)
+            logbookBusiness = trips.filter { $0.excluded != true && $0.start >= start && $0.start < end.addingTimeInterval(86400) }.reduce(0) { $0 + $1.km }
+            if let a = vehicle.logbookStartOdometer, let b = vehicle.logbookEndOdometer, b > a {
+                logbookTotal = b - a
+                percent = min(100, logbookBusiness / (b - a) * 100)
+            } else { issues.append("\(vehicle.name): enter the odometer at the start and end of the logbook period.") }
+            if (weeks ?? 0) < Self.logbookMinimumWeeks - 0.01 { issues.append("\(vehicle.name): the logbook period is under 12 continuous weeks.") }
+        } else {
+            issues.append("\(vehicle.name): set a logbook period of at least 12 continuous weeks (needed in the first year you use the logbook method; valid for 5 years).")
+        }
+        let reading = vehicle.yearOdometers?[String(year)]
+        if reading?.start == nil { issues.append("\(vehicle.name): enter the odometer on 1 July \(year).") }
+        if reading?.end == nil && Date() >= fy.end { issues.append("\(vehicle.name): enter the odometer on 30 June \(year + 1).") }
+        let yearTotal = reading.flatMap { r in r.start.flatMap { s in r.end.map { $0 - s } } }
+        let yearTrips = trips.filter { fy.contains($0.start) }
+        let missingOdometer = yearTrips.filter { $0.excluded != true && ($0.odometerStart == nil || $0.odometerEnd == nil) }.count
+        if missingOdometer > 0 { issues.append("\(vehicle.name): \(missingOdometer) work trip\(missingOdometer == 1 ? "" : "s") missing a start or finish odometer reading.") }
+        return LogbookSummary(vehicle: vehicle, logbookWeeks: weeks, logbookTotalKm: logbookTotal, logbookBusinessKm: logbookBusiness, businessPercent: percent,
+                              yearStartOdometer: reading?.start, yearEndOdometer: reading?.end, yearTotalKm: yearTotal,
+                              yearWorkKm: yearTrips.reduce(0) { $0 + $1.km(in: fy) }, issues: issues)
+    }
+    /// Everything the ATO asks for that is still missing for this financial year.
+    func atoChecklist(year: Int) -> [String] {
+        let tz = data.schedule.timeZoneID
+        let fy = FinancialYear.interval(year, timeZone: tz)
+        var issues: [String] = []
+        let used = vehicles.filter { v in data.trips.contains { $0.vehicleID == v.id && fy.contains($0.start) } }
+        if used.isEmpty && data.trips.contains(where: { fy.contains($0.start) }) { issues.append("Add your vehicle in Settings → Vehicles and assign it to your trips.") }
+        for v in used { issues += logbookSummary(v, year: year).issues }
+        let periods = used.compactMap { v in v.logbookStart.flatMap { s in v.logbookEnd.map { DateInterval(start: s, end: max(s, $0)) } } }
+        if periods.count > 1, Set(periods.map { "\($0.start.timeIntervalSince1970)-\($0.end.timeIntervalSince1970)" }).count > 1 {
+            issues.append("With 2 or more cars, the ATO expects each car's logbook to cover the same period.")
+        }
+        let noABN = data.invoices.filter { fy.contains($0.date) && (Decimal(string: $0.total, locale: Locale(identifier: "en_US_POSIX")) ?? 0) >= Self.taxInvoiceThreshold && ($0.abn ?? "").filter(\.isNumber).count != 11 }
+        if !noABN.isEmpty { issues.append("\(noABN.count) receipt\(noABN.count == 1 ? "" : "s") of $82.50 or more without the supplier's 11-digit ABN. A valid tax invoice shows it.") }
+        return issues
+    }
+
     // MARK: Continuing a trip
 
     /// A finished trip can be continued for this long, e.g. after a stop to pick up parts.
@@ -346,13 +407,20 @@ import Security
             return "\"" + safe.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         }
         let formatter = ISO8601DateFormatter()
-        var rows = [["Invoice ID", "Supplier", "ABN", "Invoice number", "Invoice date UTC", "Total AUD", "GST AUD", "Category", "Custom category", "Work use percent (unverified)", "Reimbursed AUD", "Accountant review status", "Notes", "Original PDF", "Captured UTC", "Items purchased", "Receipt checked"]]
-        for i in receipts { rows.append([i.id.uuidString, i.supplier, i.abn ?? "", i.number, formatter.string(from: i.date), i.total, i.gst, i.category ?? "Other", i.customCategory ?? "", i.workPercent ?? "", i.reimbursed ?? "", i.taxStatus ?? "Needs accountant review", i.notes, i.pdfFilename, formatter.string(from: i.captured), i.items ?? "", i.receiptReviewed == true ? "Yes" : "No"]) }
+        let local = Self.localFormatter(data.schedule.timeZoneID, "dd/MM/yyyy")
+        var rows = [["Date", "Supplier", "Supplier ABN", "Tax invoice check", "Invoice number", "Items purchased", "Total AUD", "GST AUD", "Category", "Custom category", "Work use percent (unverified)", "Reimbursed AUD", "Accountant review status", "Notes", "Original PDF", "Invoice ID", "Invoice date UTC", "Captured UTC", "Receipt checked"]]
+        for i in receipts {
+            let total = Decimal(string: i.total, locale: Locale(identifier: "en_US_POSIX")) ?? 0
+            let hasABN = (i.abn ?? "").filter(\.isNumber).count == 11
+            let check = total < Self.taxInvoiceThreshold ? "Under $82.50" : (hasABN ? "Supplier ABN recorded" : "ABN missing — check the tax invoice")
+            rows.append([local.string(from: i.date), i.supplier, i.abn ?? "", check, i.number, i.items ?? "", i.total, i.gst, i.category ?? "Other", i.customCategory ?? "", i.workPercent ?? "", i.reimbursed ?? "", i.taxStatus ?? "Needs accountant review", i.notes, i.pdfFilename, i.id.uuidString, formatter.string(from: i.date), formatter.string(from: i.captured), i.receiptReviewed == true ? "Yes" : "No"])
+        }
         let csv = "\u{FEFF}" + rows.map { $0.map(cell).joined(separator: ",") }.joined(separator: "\r\n")
         let register = try exportURL("Worklog-invoices-FY-\(year).csv")
         try Data(csv.utf8).write(to: register, options: [.atomic, .completeFileProtection])
         let perVehicle = vehicles.map { v in "\(v.displayName): \(String(format: "%.1f", data.trips.filter { $0.vehicleID == v.id }.reduce(0) { $0 + $1.km(in: interval) })) km" }.joined(separator: "; ")
-        let summary = "Worklog accountant export: 1 July \(year) to 30 June \(year+1). Work kilometres: \(data.trips.reduce(0) { $0 + $1.km(in: interval) }).\(perVehicle.isEmpty ? "" : " By vehicle: \(perVehicle).") Invoice categories, amounts and business-use proportions are user-entered and require review. Original PDFs are included. GPS work trips alone are not a complete ATO logbook. Retain other required odometer, total-use and expense evidence. No automatic deletion applies. Keep independent backups for the required retention period."
+        let checklist = atoChecklist(year: year)
+        let summary = "Worklog accountant export: 1 July \(year) to 30 June \(year+1). Work kilometres: \(String(format: "%.1f", data.trips.reduce(0) { $0 + $1.km(in: interval) })).\(perVehicle.isEmpty ? "" : " By vehicle: \(perVehicle).")\n\nFiles: trip log (all vehicles, and one per vehicle), vehicle logbook summary (make, model, engine, registration, logbook period, odometer readings, business-use percentage), receipt register with tax-invoice ABN check, original receipt PDFs.\n\nATO record check: " + (checklist.isEmpty ? "no missing items found." : "\n- " + checklist.joined(separator: "\n- ")) + "\n\nInvoice categories, amounts and business-use proportions are user-entered and require review. Kilometres come from GPS unless corrected; odometer readings are entered by the driver. The accountant decides deductibility. No automatic deletion applies; keep records for at least 5 years from lodgement.\n"
         let note = try exportURL("Worklog-accountant-notes-FY-\(year).txt")
         try Data(summary.utf8).write(to: note, options: [.atomic, .completeFileProtection])
         var transactionFiles: [URL] = []
@@ -361,7 +429,29 @@ import Security
             try receiptBytes(invoice).write(to: url, options: [.atomic, .completeFileProtection]); transactionFiles.append(url)
         }
         let vehicleLogs = vehicles.count > 1 ? try vehicles.filter { v in data.trips.contains { $0.vehicleID == v.id } }.map { try csvExport(year: year, vehicle: $0) } : []
-        return [try csvExport(year: year), register, note] + vehicleLogs + receipts.map { pdfURL($0) } + transactionFiles
+        return [try csvExport(year: year), try logbookSummaryExport(year: year), register, note] + vehicleLogs + receipts.map { pdfURL($0) } + transactionFiles
+    }
+    static func localFormatter(_ timeZoneID: String, _ format: String) -> DateFormatter {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_AU"); f.timeZone = TimeZone(identifier: timeZoneID) ?? .current; f.dateFormat = format; return f
+    }
+    /// One row per vehicle with the ATO logbook details and business-use percentage.
+    func logbookSummaryExport(year: Int) throws -> URL {
+        let day = Self.localFormatter(data.schedule.timeZoneID, "dd/MM/yyyy")
+        func cell(_ value: String) -> String {
+            let safe = value.first.map { "=+-@\t\r".contains($0) } == true ? "'" + value : value
+            return "\"" + safe.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        }
+        func km(_ v: Double?) -> String { v.map { String(format: "%.1f", $0) } ?? "" }
+        var rows = [["Vehicle", "Make", "Model", "Engine capacity", "Registration", "Logbook start", "Logbook end", "Logbook weeks", "Odometer at logbook start", "Odometer at logbook end", "Total km in logbook period", "Business km in logbook period", "Business-use percentage", "Odometer 1 July \(year)", "Odometer 30 June \(year + 1)", "Total km in financial year", "Work km in financial year", "Missing for ATO"]]
+        for v in vehicles {
+            let s = logbookSummary(v, year: year)
+            rows.append([v.name, v.make ?? "", v.model ?? "", v.engineCapacity ?? "", v.registration, v.logbookStart.map { day.string(from: $0) } ?? "", v.logbookEnd.map { day.string(from: $0) } ?? "",
+                         s.logbookWeeks.map { String(format: "%.1f", $0) } ?? "", km(v.logbookStartOdometer), km(v.logbookEndOdometer), km(s.logbookTotalKm), km(s.logbookBusinessKm),
+                         s.businessPercent.map { String(format: "%.1f%%", $0) } ?? "", km(s.yearStartOdometer), km(s.yearEndOdometer), km(s.yearTotalKm), km(s.yearWorkKm), s.issues.joined(separator: " ")])
+        }
+        let csv = "\u{FEFF}" + rows.map { $0.map(cell).joined(separator: ",") }.joined(separator: "\r\n")
+        let url = try exportURL("Worklog-vehicle-logbook-FY-\(year)-\(year+1).csv")
+        try Data(csv.utf8).write(to: url, options: [.atomic, .completeFileProtection]); return url
     }
     /// Trip log for the financial year; pass a vehicle for that vehicle's own log.
     func csvExport(year: Int, vehicle: Vehicle? = nil) throws -> URL {
@@ -371,9 +461,20 @@ import Security
             let safe = value.first.map { "=+-@\t\r".contains($0) } == true ? "'" + value : value
             return "\"" + safe.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         }
-        var rows = [["Trip ID", "Purpose", "Vehicle", "Started UTC", "Finished UTC", "Time zone", "Work km in selected FY", "Full trip km", "GPS km", "Automatic", "Review", "Correction reason", "Odometer start km", "Odometer finish km", "Classification", "Home/work check", "Stops (minutes)"]]
-        for t in data.trips where (t.end ?? t.start) > interval.start && t.start < interval.end && (vehicle == nil || t.vehicleID == vehicle?.id) {
-            rows.append([t.id.uuidString, t.purpose, t.vehicle, formatter.string(from: t.start), t.end.map { formatter.string(from: $0) } ?? "", t.timeZoneID, String(format: "%.3f", t.km(in: interval)), String(format: "%.3f", t.km), String(format: "%.3f", t.metres / 1000), t.automatic ? "Yes" : "No", t.reviewReasons.joined(separator: "; "), t.correctionReason, t.odometerStart.map { String($0) } ?? "", t.odometerEnd.map { String($0) } ?? "", t.excluded == true ? "Personal / excluded" : "Work", placeAssessment(t).map { "\($0.short) \($0.message)" } ?? (t.placeReviewed == true ? "Confirmed work by driver" : ""), (t.pauses ?? []).map { String(Int($0.duration / 60)) }.joined(separator: "; ")])
+        let tz = data.schedule.timeZoneID
+        let day = Self.localFormatter(tz, "dd/MM/yyyy"), time = Self.localFormatter(tz, "HH:mm")
+        var rows = [["Start date", "Start time", "End date", "End time", "Reason for journey", "Journey type", "Vehicle", "Registration", "Make and model", "Odometer start km", "Odometer finish km", "Km by odometer", "Km travelled", "Work km in selected FY", "GPS km", "Recording", "Review", "Correction reason", "Home/work check", "Stops (minutes)", "Started UTC", "Finished UTC", "Time zone", "Trip ID"]]
+        for t in data.trips.sorted(by: { $0.start < $1.start }) where (t.end ?? t.start) > interval.start && t.start < interval.end && (vehicle == nil || t.vehicleID == vehicle?.id) {
+            let v = self.vehicle(t.vehicleID)
+            let odoKm = t.odometerStart.flatMap { s in t.odometerEnd.map { String(format: "%.1f", $0 - s) } } ?? ""
+            rows.append([day.string(from: t.start), time.string(from: t.start), t.end.map { day.string(from: $0) } ?? "", t.end.map { time.string(from: $0) } ?? "",
+                         t.purpose, t.excluded == true ? "Private" : "Business", t.vehicle, v?.registration ?? "", v?.makeModel ?? "",
+                         t.odometerStart.map { String(format: "%.1f", $0) } ?? "", t.odometerEnd.map { String(format: "%.1f", $0) } ?? "", odoKm,
+                         String(format: "%.1f", t.km), String(format: "%.3f", t.km(in: interval)), String(format: "%.3f", t.metres / 1000), t.automatic ? "Scheduled" : "Manual",
+                         t.reviewReasons.joined(separator: "; "), t.correctionReason,
+                         placeAssessment(t).map { "\($0.short) \($0.message)" } ?? (t.placeReviewed == true ? "Confirmed work by driver" : ""),
+                         (t.pauses ?? []).map { String(Int($0.duration / 60)) }.joined(separator: "; "),
+                         formatter.string(from: t.start), t.end.map { formatter.string(from: $0) } ?? "", t.timeZoneID, t.id.uuidString])
         }
         let csv = "\u{FEFF}" + rows.map { $0.map(cell).joined(separator: ",") }.joined(separator: "\r\n")
         let suffix = vehicle.map { "-" + $0.displayName.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }.joined(separator: "-") } ?? ""

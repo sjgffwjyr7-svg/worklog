@@ -112,7 +112,38 @@ struct Vehicle: Codable, Identifiable, Hashable {
     var registration = ""
     /// Odometer when the vehicle was added; later readings come from its trips.
     var startingOdometer: Double? = nil
+    // ATO logbook details.
+    var make: String? = nil
+    var model: String? = nil
+    var engineCapacity: String? = nil
+    /// The 12-week (or longer) logbook period and its odometer readings.
+    var logbookStart: Date? = nil
+    var logbookStartOdometer: Double? = nil
+    var logbookEnd: Date? = nil
+    var logbookEndOdometer: Double? = nil
+    /// Odometer at the start (1 July) and end (30 June) of each financial year, keyed by the year it starts.
+    var yearOdometers: [String: YearOdometer]? = nil
     var displayName: String { registration.isEmpty ? name : "\(name) · \(registration)" }
+    var makeModel: String { [make, model].compactMap { $0?.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: " ") }
+}
+
+struct YearOdometer: Codable, Hashable {
+    var start: Double? = nil
+    var end: Double? = nil
+}
+
+/// One vehicle's ATO logbook figures for a financial year.
+struct LogbookSummary {
+    var vehicle: Vehicle
+    var logbookWeeks: Double?
+    var logbookTotalKm: Double?
+    var logbookBusinessKm: Double
+    var businessPercent: Double?
+    var yearStartOdometer: Double?
+    var yearEndOdometer: Double?
+    var yearTotalKm: Double?
+    var yearWorkKm: Double
+    var issues: [String]
 }
 
 /// A saved home or work location used to spot commuting and breaks at home.

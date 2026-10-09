@@ -393,6 +393,43 @@ final class ReceiptTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: legacy.path))
         XCTAssertEqual(WorkStore.moveLegacyStorage(from: legacy, to: secure), secure, "Second launch keeps the private folder")
     }
+    @MainActor func testATOLogbookBusinessUseAndChecklist() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorkStore(root: root)
+        let year = FinancialYear.startYear()
+        let fy = FinancialYear.interval(year)
+        let start = fy.start.addingTimeInterval(2 * 86400)
+        var car = Vehicle(name: "Hilux")
+        store.saveVehicle(car)
+        var trip = Trip(purpose: "Site visit", vehicle: "Hilux", start: start.addingTimeInterval(86400), end: start.addingTimeInterval(86400 + 3600), automatic: false, timeZoneID: "Australia/Perth")
+        trip.vehicleID = car.id; trip.correctedKm = 1500
+        var personal = trip; personal.id = UUID(); personal.excluded = true; personal.correctedKm = 400
+        store.data.trips = [trip, personal]
+        store.data.invoices = [Invoice(supplier: "Big Shop", number: "1", date: start, total: "120.00", gst: "10.91", notes: "", pdfFilename: "x.pdf")]
+        let before = store.atoChecklist(year: year)
+        XCTAssertTrue(before.contains { $0.contains("registration") })
+        XCTAssertTrue(before.contains { $0.contains("make and model") })
+        XCTAssertTrue(before.contains { $0.contains("logbook period") })
+        XCTAssertTrue(before.contains { $0.contains("missing a start or finish odometer") })
+        XCTAssertTrue(before.contains { $0.contains("$82.50") })
+        car.registration = "1ABC234"; car.make = "Toyota"; car.model = "Hilux SR5"; car.engineCapacity = "2.8 L"
+        car.logbookStart = start; car.logbookEnd = start.addingTimeInterval(84 * 86400)
+        car.logbookStartOdometer = 10_000; car.logbookEndOdometer = 12_000
+        car.yearOdometers = [String(year): YearOdometer(start: 9_900, end: Date() >= fy.end ? 15_000 : nil)]
+        XCTAssertTrue(store.saveVehicle(car))
+        store.data.trips[0].odometerStart = 10_100; store.data.trips[0].odometerEnd = 11_600
+        store.data.invoices[0].abn = "51 824 753 556"
+        let summary = store.logbookSummary(car, year: year)
+        XCTAssertEqual(summary.logbookTotalKm ?? 0, 2000, accuracy: 0.01)
+        XCTAssertEqual(summary.logbookBusinessKm, 1500, accuracy: 0.01, "Private trips are not business km")
+        XCTAssertEqual(summary.businessPercent ?? 0, 75, accuracy: 0.01)
+        XCTAssertEqual(store.atoChecklist(year: year), [])
+        let csv = try String(contentsOf: store.logbookSummaryExport(year: year), encoding: .utf8)
+        XCTAssertTrue(csv.contains("75.0%")); XCTAssertTrue(csv.contains("Toyota")); XCTAssertTrue(csv.contains("2.8 L"))
+        let trips = try String(contentsOf: store.csvExport(year: year), encoding: .utf8)
+        XCTAssertTrue(trips.contains("\"Business\"")); XCTAssertTrue(trips.contains("\"Private\"")); XCTAssertTrue(trips.contains("1500.0"))
+    }
     @MainActor func testDeletingTripAndReceiptIsPermanent() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
