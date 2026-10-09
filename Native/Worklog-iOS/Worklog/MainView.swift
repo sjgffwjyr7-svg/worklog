@@ -853,7 +853,7 @@ struct LogFolderRow: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(km, format: .number.precision(.fractionLength(1))).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint)
                     Text("km").font(.caption2).foregroundStyle(Theme.textTertiary)
-                }
+                }.fixedSize()
                 Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Theme.textTertiary)
             } else {
                 Text("No trips").font(.caption).foregroundStyle(Theme.textTertiary)
@@ -989,7 +989,7 @@ struct TripMonthView: View {
                     let partWeek = !span.contains(week) || !span.contains(last)
                     Button { openWeek = week } label: {
                         LogFolderRow(title: week.formatted(.dateTime.day().month(), in: tz) + " – " + last.formatted(.dateTime.day().month(), in: tz),
-                                     subtitle: (partWeek ? "Mon to Sun · days in this month · " : "Mon to Sun · ") + tripCount(weekTrips.count),
+                                     subtitle: (partWeek ? "Part week · " : "Mon to Sun · ") + tripCount(weekTrips.count),
                                      km: TripCalendar.workKm(weekTrips), count: weekTrips.count, highlight: week == thisWeek ? "This week" : nil)
                     }.buttonStyle(.plain)
                 }
