@@ -199,6 +199,24 @@ enum TripCalendar {
     static func trips(_ trips: [Trip], inWeek weekStart: Date, timeZoneID: String) -> [Trip] {
         trips.filter { self.weekStart(of: $0.start, timeZoneID: timeZoneID) == weekStart }
     }
+    /// Australian financial years (by starting year) that contain trips, newest first.
+    static func financialYears(_ trips: [Trip], timeZoneID: String) -> [Int] {
+        Array(Set(trips.map { FinancialYear.startYear(for: $0.start, timeZone: timeZoneID) })).sorted(by: >)
+    }
+    static func monthStart(of date: Date, timeZoneID: String) -> Date {
+        let cal = calendar(timeZoneID)
+        return cal.dateInterval(of: .month, for: date)?.start ?? cal.startOfDay(for: date)
+    }
+    static func monthInterval(of month: Date, timeZoneID: String) -> DateInterval {
+        calendar(timeZoneID).dateInterval(of: .month, for: month) ?? DateInterval(start: month, duration: 0)
+    }
+    /// Month starts that contain trips, newest first.
+    static func months(_ trips: [Trip], timeZoneID: String) -> [Date] {
+        Array(Set(trips.map { monthStart(of: $0.start, timeZoneID: timeZoneID) })).sorted(by: >)
+    }
+    static func trips(_ trips: [Trip], within span: DateInterval) -> [Trip] {
+        trips.filter { $0.start >= span.start && $0.start < span.end }
+    }
     /// Work kilometres, leaving out trips marked private.
     static func workKm(_ trips: [Trip]) -> Double { trips.filter { $0.excluded != true }.reduce(0) { $0 + $1.km } }
 }

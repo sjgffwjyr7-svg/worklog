@@ -168,50 +168,23 @@ struct MainView: View {
 struct DashboardView: View {
     @EnvironmentObject var store: WorkStore
     @EnvironmentObject var recorder: TripRecorder
-    @State private var year = FinancialYear.startYear()
     @State private var starting = false
     @State private var startingOdometer = ""
     @State private var purpose = ""
-    @State private var vehicleFilter: UUID?
     @State private var addingVehicle = false
     @State private var addingVehicleFromStart = false
     @State private var odometerWarning: OdometerCheck?
     @State private var openTripLog = false
-    var interval: DateInterval { FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID) }
-    var trips: [Trip] { store.data.trips.filter { ($0.end ?? $0.start) > interval.start && $0.start < interval.end && (vehicleFilter == nil || $0.vehicleID == vehicleFilter) }.sorted { $0.start > $1.start } }
-    var years: [Int] { Array(Set([year, FinancialYear.startYear(), FinancialYear.startYear()-1] + store.data.trips.map { FinancialYear.startYear(for: $0.start) } + store.data.invoices.map { FinancialYear.startYear(for: $0.date) })).sorted(by: >) }
-    var totalKm: Double { trips.reduce(0) { $0 + $1.km(in: interval) } }
+    var trips: [Trip] { store.data.trips.sorted { $0.start > $1.start } }
+    var thisWeekTrips: [Trip] {
+        let tz = store.data.schedule.timeZoneID
+        return TripCalendar.trips(trips, inWeek: TripCalendar.weekStart(of: Date(), timeZoneID: tz), timeZoneID: tz)
+    }
     var reviewCount: Int { trips.filter { !$0.reviewReasons.isEmpty || store.placeAssessment($0) != nil }.count }
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    HStack(alignment: .center) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Work kilometres").font(.subheadline).foregroundStyle(Theme.textSecondary)
-                            Text("1 July \(String(year)) – 30 June \(String(year+1))").font(.caption).foregroundStyle(Theme.textTertiary)
-                        }
-                        Spacer()
-                        FinancialYearMenu(year: $year, years: years)
-                    }
-                    if store.vehicles.count > 1 {
-                        Menu {
-                            Picker("Vehicle log", selection: $vehicleFilter) {
-                                Text("All vehicles").tag(UUID?.none)
-                                ForEach(store.vehicles) { Text($0.displayName).tag(Optional($0.id)) }
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "car.2.fill")
-                                Text(store.vehicle(vehicleFilter)?.displayName ?? "All vehicles").lineLimit(1)
-                                Image(systemName: "chevron.down").font(.caption.weight(.bold))
-                            }
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
-                            .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(Theme.mint.opacity(0.13), in: Capsule())
-                        }
-                    }
-                    totalCard
                     recorderCard
                     if recorder.authorization != .authorizedAlways && store.data.schedule.enabled {
                         VStack(alignment: .leading, spacing: 9) {
@@ -231,22 +204,15 @@ struct DashboardView: View {
                                 .font(.subheadline).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
                         }.frame(maxWidth: .infinity).cardStyle(padding: 28)
                     } else {
-                        Button { openTripLog = true } label: {
-                            HStack(spacing: 14) {
-                                Image(systemName: "list.bullet.rectangle.portrait.fill").font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.accent)
-                                    .frame(width: 46, height: 46).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Trip log").font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
-                                    Text(tripCount(trips.count) + " · grouped by week").font(.subheadline).foregroundStyle(Theme.textSecondary)
-                                    if let last = trips.first {
-                                        (Text("Last: ") + Text(last.purpose) + Text(" · ") + Text(last.start, format: .dateTime.weekday(.abbreviated).day().month()))
-                                            .font(.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
-                                    }
-                                }
-                                Spacer(minLength: 8)
-                                Image(systemName: "chevron.right").font(.subheadline.weight(.bold)).foregroundStyle(Theme.accent)
-                            }.contentShape(Rectangle()).cardStyle(padding: 16)
-                        }.buttonStyle(.plain)
+                        VStack(alignment: .leading, spacing: 10) {
+                            // Same look as the Start work trip button.
+                            Button { openTripLog = true } label: { Label("Trip log", systemImage: "list.bullet.rectangle.portrait.fill") }
+                                .buttonStyle(PrimaryButtonStyle())
+                            HStack(spacing: 8) {
+                                StatChip(icon: "calendar", text: "This week " + TripCalendar.workKm(thisWeekTrips).formatted(.number.precision(.fractionLength(1))) + " km", color: Theme.mint)
+                                if reviewCount > 0 { StatChip(icon: "exclamationmark.triangle.fill", text: "\(reviewCount) to review", color: Theme.warning) }
+                            }
+                        }
                     }
                 }.padding(.horizontal, 18).padding(.vertical, 12)
             }
@@ -255,7 +221,7 @@ struct DashboardView: View {
             .toolbarBackground(Theme.background, for: .navigationBar)
             .sheet(isPresented: $starting) { startSheet }
             .sheet(isPresented: $addingVehicle) { VehicleEditorView(existing: nil) }
-            .navigationDestination(isPresented: $openTripLog) { TripLogView(year: year, vehicleFilter: vehicleFilter) }
+            .navigationDestination(isPresented: $openTripLog) { TripLogView() }
             .onAppear {
                 if DemoMode.flag("-WorklogShowStart") { purpose = store.lastTripDescription; starting = true }
                 if DemoMode.flag("-WorklogOpenTripLog") { openTripLog = true }
@@ -272,23 +238,6 @@ struct DashboardView: View {
         let chosen = vehicleID ?? store.currentVehicle?.id
         if !checked, let reading, let check = store.odometerCheck(reading: reading, vehicleID: chosen) { odometerWarning = check; return }
         if recorder.startManual(purpose: purpose, startingOdometer: reading, vehicleID: chosen) { starting = false }
-    }
-
-    var totalCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(totalKm, format: .number.precision(.fractionLength(1)))
-                    .font(.system(size: 52, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
-                    .minimumScaleFactor(0.5).lineLimit(1)
-                Text("km").font(.title3.weight(.semibold)).foregroundStyle(Theme.mint)
-            }
-            HStack(spacing: 10) {
-                StatChip(icon: "car.side.fill", text: "\(trips.count) trips", color: Theme.accent)
-                if reviewCount > 0 { StatChip(icon: "exclamationmark.triangle.fill", text: "\(reviewCount) to review", color: Theme.warning) }
-                Spacer()
-                StatChip(icon: "lock.iphone", text: "On iPhone", color: Theme.mint).fixedSize()
-            }
-        }.cardStyle(padding: 22)
     }
 
     var recorderCard: some View {
@@ -903,42 +852,132 @@ extension Date {
 
 func tripCount(_ n: Int) -> String { n == 1 ? "1 trip" : "\(n) trips" }
 
-/// Trips in the selected financial year and vehicle, shared by the trip log screens.
-@MainActor private func logTrips(_ store: WorkStore, year: Int, vehicleFilter: UUID?) -> [Trip] {
-    let span = FinancialYear.interval(year, timeZone: store.data.schedule.timeZoneID)
-    return store.data.trips.filter { ($0.end ?? $0.start) > span.start && $0.start < span.end && (vehicleFilter == nil || $0.vehicleID == vehicleFilter) }
+/// Trips for one vehicle (or all), shared by the trip log screens.
+@MainActor private func logTrips(_ store: WorkStore, vehicleFilter: UUID?) -> [Trip] {
+    store.data.trips.filter { vehicleFilter == nil || $0.vehicleID == vehicleFilter }
 }
 
+private struct LogHeader: View {
+    let km: Double
+    let caption: String
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(km, format: .number.precision(.fractionLength(1))).font(.system(size: 44, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
+                .minimumScaleFactor(0.5).lineLimit(1)
+            Text(caption).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
+        }.padding(.bottom, 6)
+    }
+}
+
+/// Top of the trip log: financial years with their work kilometres.
 struct TripLogView: View {
     @EnvironmentObject var store: WorkStore
-    let year: Int
-    let vehicleFilter: UUID?
-    @State private var openWeek: Date?
+    @State private var vehicleFilter: UUID?
+    @State private var openYear: Int?
     var tz: String { store.data.schedule.timeZoneID }
-    var trips: [Trip] { logTrips(store, year: year, vehicleFilter: vehicleFilter) }
     var body: some View {
-        let all = trips, weeks = TripCalendar.weeks(all, timeZoneID: tz), thisWeek = TripCalendar.weekStart(of: Date(), timeZoneID: tz)
+        let all = logTrips(store, vehicleFilter: vehicleFilter)
+        let years = TripCalendar.financialYears(all, timeZoneID: tz)
+        let current = FinancialYear.startYear(for: Date(), timeZone: tz)
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 10) {
-                    StatChip(icon: "calendar", text: "FY \(String(year))–\(String(year + 1).suffix(2))", color: Theme.accent)
-                    StatChip(icon: "car.fill", text: store.vehicle(vehicleFilter)?.displayName ?? "All vehicles", color: Theme.mint)
-                }.padding(.bottom, 6)
-                if weeks.isEmpty { Text("No trips in this financial year.").foregroundStyle(Theme.textSecondary) }
-                ForEach(weeks, id: \.self) { week in
-                    let weekTrips = TripCalendar.trips(all, inWeek: week, timeZoneID: tz)
-                    let last = TripCalendar.days(inWeek: week, timeZoneID: tz).last ?? week
-                    Button { openWeek = week } label: {
-                        LogFolderRow(title: week.formatted(.dateTime.day().month(), in: tz) + " – " + last.formatted(.dateTime.day().month(), in: tz),
-                                     subtitle: "Mon to Sun · " + tripCount(weekTrips.count) + " · " + last.formatted(.dateTime.year(), in: tz),
-                                     km: TripCalendar.workKm(weekTrips), count: weekTrips.count, highlight: week == thisWeek ? "This week" : nil)
+                if store.vehicles.count > 1 {
+                    Menu {
+                        Picker("Vehicle", selection: $vehicleFilter) {
+                            Text("All vehicles").tag(UUID?.none)
+                            ForEach(store.vehicles) { Text($0.displayName).tag(Optional($0.id)) }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "car.2.fill")
+                            Text(store.vehicle(vehicleFilter)?.displayName ?? "All vehicles").lineLimit(1)
+                            Image(systemName: "chevron.down").font(.caption.weight(.bold))
+                        }
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(Theme.mint.opacity(0.13), in: Capsule())
+                    }.padding(.bottom, 6)
+                }
+                if years.isEmpty { Text("No trips recorded yet.").foregroundStyle(Theme.textSecondary) }
+                ForEach(years, id: \.self) { year in
+                    let span = FinancialYear.interval(year, timeZone: tz)
+                    let yearTrips = all.filter { span.contains($0.start) }
+                    Button { openYear = year } label: {
+                        LogFolderRow(title: "FY \(String(year))–\(String(year + 1).suffix(2))",
+                                     subtitle: "1 July \(String(year)) – 30 June \(String(year + 1)) · " + tripCount(yearTrips.count),
+                                     km: TripCalendar.workKm(yearTrips), count: yearTrips.count, highlight: year == current ? "This year" : nil)
                     }.buttonStyle(.plain)
                 }
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
         .background(Theme.background)
         .navigationTitle("Trip log")
-        .navigationDestination(item: $openWeek) { TripWeekView(weekStart: $0, year: year, vehicleFilter: vehicleFilter) }
+        .navigationDestination(item: $openYear) { TripYearView(year: $0, vehicleFilter: vehicleFilter) }
+        .onAppear { if DemoMode.flag("-WorklogOpenYear"), openYear == nil { openYear = years.first } }
+    }
+}
+
+struct TripYearView: View {
+    @EnvironmentObject var store: WorkStore
+    let year: Int
+    let vehicleFilter: UUID?
+    @State private var openMonth: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let span = FinancialYear.interval(year, timeZone: tz)
+        let yearTrips = logTrips(store, vehicleFilter: vehicleFilter).filter { span.contains($0.start) }
+        let months = TripCalendar.months(yearTrips, timeZoneID: tz)
+        let thisMonth = TripCalendar.monthStart(of: Date(), timeZoneID: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                LogHeader(km: TripCalendar.workKm(yearTrips), caption: "work km · " + tripCount(yearTrips.count))
+                ForEach(months, id: \.self) { month in
+                    let monthTrips = TripCalendar.trips(yearTrips, within: TripCalendar.monthInterval(of: month, timeZoneID: tz))
+                    Button { openMonth = month } label: {
+                        LogFolderRow(title: month.formatted(.dateTime.month(.wide).year(), in: tz), subtitle: tripCount(monthTrips.count),
+                                     km: TripCalendar.workKm(monthTrips), count: monthTrips.count, highlight: month == thisMonth ? "This month" : nil)
+                    }.buttonStyle(.plain)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle("FY \(String(year))–\(String(year + 1).suffix(2))")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $openMonth) { TripMonthView(month: $0, vehicleFilter: vehicleFilter) }
+        .onAppear { if DemoMode.flag("-WorklogOpenMonth"), openMonth == nil { openMonth = months.first } }
+    }
+}
+
+struct TripMonthView: View {
+    @EnvironmentObject var store: WorkStore
+    let month: Date
+    let vehicleFilter: UUID?
+    @State private var openWeek: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let span = TripCalendar.monthInterval(of: month, timeZoneID: tz)
+        let monthTrips = TripCalendar.trips(logTrips(store, vehicleFilter: vehicleFilter), within: span)
+        let weeks = TripCalendar.weeks(monthTrips, timeZoneID: tz)
+        let thisWeek = TripCalendar.weekStart(of: Date(), timeZoneID: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                LogHeader(km: TripCalendar.workKm(monthTrips), caption: "work km · " + tripCount(monthTrips.count))
+                ForEach(weeks, id: \.self) { week in
+                    let weekTrips = TripCalendar.trips(monthTrips, inWeek: week, timeZoneID: tz)
+                    let last = TripCalendar.days(inWeek: week, timeZoneID: tz).last ?? week
+                    let partWeek = !span.contains(week) || !span.contains(last)
+                    Button { openWeek = week } label: {
+                        LogFolderRow(title: week.formatted(.dateTime.day().month(), in: tz) + " – " + last.formatted(.dateTime.day().month(), in: tz),
+                                     subtitle: (partWeek ? "Mon to Sun · days in this month · " : "Mon to Sun · ") + tripCount(weekTrips.count),
+                                     km: TripCalendar.workKm(weekTrips), count: weekTrips.count, highlight: week == thisWeek ? "This week" : nil)
+                    }.buttonStyle(.plain)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle(month.formatted(.dateTime.month(.wide).year(), in: tz))
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $openWeek) { TripWeekView(weekStart: $0, within: span, vehicleFilter: vehicleFilter) }
         .onAppear { if DemoMode.flag("-WorklogOpenWeek"), openWeek == nil { openWeek = weeks.first } }
     }
 }
@@ -946,19 +985,18 @@ struct TripLogView: View {
 struct TripWeekView: View {
     @EnvironmentObject var store: WorkStore
     let weekStart: Date
-    let year: Int
+    /// The month this week was opened from; a week crossing months shows only that month's days.
+    let within: DateInterval
     let vehicleFilter: UUID?
     @State private var openDay: Date?
     var tz: String { store.data.schedule.timeZoneID }
     var body: some View {
-        let weekTrips = TripCalendar.trips(logTrips(store, year: year, vehicleFilter: vehicleFilter), inWeek: weekStart, timeZoneID: tz)
-        let days = TripCalendar.days(inWeek: weekStart, timeZoneID: tz)
+        let weekTrips = TripCalendar.trips(TripCalendar.trips(logTrips(store, vehicleFilter: vehicleFilter), within: within), inWeek: weekStart, timeZoneID: tz)
+        let allDays = TripCalendar.days(inWeek: weekStart, timeZoneID: tz)
+        let days = allDays.filter { within.contains($0) }
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(TripCalendar.workKm(weekTrips), format: .number.precision(.fractionLength(1))).font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
-                    Text("work km this week").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
-                }.padding(.bottom, 6)
+                LogHeader(km: TripCalendar.workKm(weekTrips), caption: "work km this week")
                 ForEach(days, id: \.self) { day in
                     let dayTrips = TripCalendar.trips(weekTrips, onDay: day, timeZoneID: tz)
                     Button { openDay = day } label: {
@@ -967,12 +1005,15 @@ struct TripWeekView: View {
                                      highlight: TripCalendar.calendar(tz).isDateInToday(day) ? "Today" : nil)
                     }.buttonStyle(.plain).disabled(dayTrips.isEmpty)
                 }
+                if days.count < 7 {
+                    Text("The rest of this week is in the next or previous month.").font(.footnote).foregroundStyle(Theme.textTertiary)
+                }
             }.padding(.horizontal, 18).padding(.vertical, 12)
         }
         .background(Theme.background)
-        .navigationTitle("Mon \(weekStart.formatted(.dateTime.day().month(), in: tz)) – Sun \((days.last ?? weekStart).formatted(.dateTime.day().month(), in: tz))")
+        .navigationTitle("Mon \(weekStart.formatted(.dateTime.day().month(), in: tz)) – Sun \((allDays.last ?? weekStart).formatted(.dateTime.day().month(), in: tz))")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(item: $openDay) { TripDayView(day: $0, year: year, vehicleFilter: vehicleFilter) }
+        .navigationDestination(item: $openDay) { TripDayView(day: $0, vehicleFilter: vehicleFilter) }
         .onAppear {
             if DemoMode.flag("-WorklogOpenDay"), openDay == nil { openDay = days.last { !TripCalendar.trips(weekTrips, onDay: $0, timeZoneID: tz).isEmpty } }
         }
@@ -982,18 +1023,14 @@ struct TripWeekView: View {
 struct TripDayView: View {
     @EnvironmentObject var store: WorkStore
     let day: Date
-    let year: Int
     let vehicleFilter: UUID?
     @State private var pendingDelete: Trip?
     var tz: String { store.data.schedule.timeZoneID }
     var body: some View {
-        let dayTrips = TripCalendar.trips(logTrips(store, year: year, vehicleFilter: vehicleFilter), onDay: day, timeZoneID: tz)
+        let dayTrips = TripCalendar.trips(logTrips(store, vehicleFilter: vehicleFilter), onDay: day, timeZoneID: tz)
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(TripCalendar.workKm(dayTrips), format: .number.precision(.fractionLength(1))).font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
-                    Text("work km · " + tripCount(dayTrips.count)).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
-                }.padding(.bottom, 6)
+                LogHeader(km: TripCalendar.workKm(dayTrips), caption: "work km · " + tripCount(dayTrips.count))
                 if dayTrips.isEmpty { Text("No trips on this day.").foregroundStyle(Theme.textSecondary) }
                 ForEach(dayTrips) { trip in
                     HStack(spacing: 10) {
