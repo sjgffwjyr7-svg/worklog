@@ -107,7 +107,9 @@ final class WorklogTests: XCTestCase {
     var allowed = true
     var duringAuthentication: (() -> Void)?
     private(set) var cancelled = false
+    private(set) var calls = 0
     func authenticate(reason: String) async throws -> Bool {
+        calls += 1
         duringAuthentication?()
         return allowed
     }
@@ -115,6 +117,30 @@ final class WorklogTests: XCTestCase {
 }
 
 final class AppLockTests: XCTestCase {
+    @MainActor func testFaceIDPromptsAutomaticallyOncePerLock() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let auth = FakeOwnerAuthenticator()
+        let lock = AppLock(preferenceFile: directory.appendingPathComponent("lock.json"), makeAuthenticator: { auth })
+        await lock.autoUnlockIfNeeded()
+        XCTAssertEqual(auth.calls, 0, "No prompt while app lock is off")
+        await lock.setEnabled(true)
+        lock.enteredBackground(); lock.becameActive()
+        let before = auth.calls
+        auth.allowed = false
+        await lock.autoUnlockIfNeeded()
+        XCTAssertEqual(auth.calls, before + 1, "Opening the locked app asks for Face ID")
+        XCTAssertFalse(lock.canShowRecords)
+        await lock.autoUnlockIfNeeded()
+        XCTAssertEqual(auth.calls, before + 1, "A cancelled prompt is not repeated automatically")
+        auth.allowed = true
+        await lock.unlock()
+        XCTAssertTrue(lock.canShowRecords, "Unlock button still works")
+        lock.enteredBackground(); lock.becameActive()
+        await lock.autoUnlockIfNeeded()
+        XCTAssertEqual(auth.calls, before + 3, "Each new lock asks again")
+        XCTAssertTrue(lock.canShowRecords)
+    }
     @MainActor func testEnablePersistUnlockAndBackgroundLock() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }

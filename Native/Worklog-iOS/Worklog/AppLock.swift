@@ -15,7 +15,8 @@ import UIKit
             throw error ?? NSError(domain: "WorklogAuthentication", code: 1,
                 userInfo: [NSLocalizedDescriptionKey: "Set an iPhone passcode in Settings before enabling app lock."])
         }
-        // iOS selects Face ID / Touch ID and offers the device passcode fallback.
+        // iOS tries Face ID / Touch ID first; if the face isn't recognised it offers the iPhone passcode.
+        context.localizedFallbackTitle = "Use iPhone passcode"
         return try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
     }
     func cancel() { context.invalidate() }
@@ -33,6 +34,7 @@ import UIKit
     private var attempt = UUID()
     private var inBackground = false
     private var lockGeneration = UUID()
+    private var autoPromptedGeneration: UUID?
     var canShowRecords: Bool { !enabled || isUnlocked }
 
     init(preferenceFile: URL? = nil,
@@ -70,6 +72,13 @@ import UIKit
         guard enabled, !isUnlocked else { return }
         let generation = lockGeneration
         if await authenticate(reason: "Unlock your Worklog trips and invoices."), !inBackground, generation == lockGeneration { isUnlocked = true }
+    }
+    /// Shows Face ID as soon as Worklog opens or returns while locked. It asks once per lock, so cancelling
+    /// the prompt (which briefly makes the app inactive) doesn't bring it straight back; the Unlock button retries.
+    func autoUnlockIfNeeded() async {
+        guard enabled, !isUnlocked, !busy, !inBackground, autoPromptedGeneration != lockGeneration else { return }
+        autoPromptedGeneration = lockGeneration
+        await unlock()
     }
     func setEnabled(_ value: Bool) async {
         guard value != enabled else { return }
@@ -136,14 +145,16 @@ struct WorklogGate: View {
                     Button { Task { await lock.unlock() } } label: {
                         Label(lock.busy ? "Authenticating…" : "Unlock Worklog", systemImage: "lock.open")
                     }.buttonStyle(PrimaryButtonStyle()).disabled(lock.busy).padding(.horizontal, 20)
-                    Text("Use Face ID, Touch ID or your device passcode.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Face ID opens Worklog automatically. If your face isn't recognised, use your iPhone passcode.").font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     if let message = lock.message { Text(message).font(.footnote).multilineTextAlignment(.center) }
                 }.padding(30).frame(maxWidth: .infinity, maxHeight: .infinity).background(Theme.background)
             }
         }
         .onChange(of: phase, initial: true) { _, current in
             switch current {
-            case .active: lock.becameActive(); shield.hide()
+            case .active:
+                lock.becameActive(); shield.hide()
+                Task { await lock.autoUnlockIfNeeded() }
             case .inactive: if lock.enabled { shield.show() }
             case .background:
                 if lock.enabled { shield.show() }
