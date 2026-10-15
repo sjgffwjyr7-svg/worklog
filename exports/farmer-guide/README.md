@@ -1,21 +1,19 @@
-# VMS300 farmer guide — Lively Southern-style narration
+# VMS300 farmer guide — temporary funny narrator
 
-The farmer instructional edition now has an original Southern-style narrator, following the requested direction: **strong Southern drawl, lively and cheeky**. Its 15 scenes, operating instructions, safety guidance and light farm jokes retain the original text and order.
+The revised farmer guide uses a lively synthetic American narrator, a new greeting and light farm humour between the operating instructions. It covers recalibration of cup pickup, camera cleaning and both tube-holding positions, followed by functional checks. The farmer edition retains the manual-based procedure and safety instructions.
 
-- [Listen to the short voice preview](Southern_Voice_Preview.mp3)
-- [Download the revised farmer-guide MP4](../VMS300_Farmer_Guide.mp4)
-- [Download the full voiceover MP3](VMS300_Farmer_Guide_Voiceover.mp3)
-- [Read the narration script](narration-script.md)
-- [Download the English subtitles](narration.srt)
+- [Open or download the complete MP4](../VMS300_Farmer_Guide.mp4?raw=1)
+- [Listen to the temporary voice preview](Temporary_Funny_Voice_Preview.mp3?raw=1) — a voice excerpt, not the complete procedure.
+- [Download the full narration](VMS300_Farmer_Guide_Voiceover.mp3?raw=1)
+- [Read the revised narration](narration-script.md)
+- [Download English captions](narration.srt?raw=1)
 
-The guide runs approximately **4 minutes 10 seconds**, at **1920 × 1080**, with H.264 video, AAC audio and selectable English subtitles. Sentence subtitle timings are approximate. The preview is approximately **29 seconds**, joining the introduction and a tap-versus-hold excerpt; it is an audition, not a complete operating guide.
+Sign into GitHub with access to this repository. Open the MP4 and choose **Download raw file** to save it to your computer. The MP4 uses H.264 video, AAC sound and selectable English captions. Anonymous access to this repository may return 404.
 
-The narrator uses independent stock synthetic voice bases with broad Southern pronunciation and light country character. The uploaded reference speaker was not cloned or copied. This cloud session could not audition the reference audio; the chosen direction follows the user's explicit description. An exact perceptual match has not been verified.
+Controller close-ups identify individual functions with yellow highlights. **TAP ONCE**, **PRESS AND HOLD** and **PRESS TOGETHER** are distinct. The 43 visual cues follow measured generated speech-chunk starts; no hold duration has been invented. The pictured controller is the left-oriented station; right-oriented stations are mirrored.
 
-This remains a **production draft**. It uses manufacturer illustrations, an annotated photo-based control graphic and labelled gaps where actual cup alignment, camera/sponge and both tube-holding positions still need suitable site close-ups. It is not a recording or verification of a station calibration.
+The controller graphic is an existing generated, annotated derivative based on the supplied photo, clearly labelled **PHOTO-DERIVED CONTROL GRAPHIC**. It is not an untouched photograph or a live machine state. No lamp state has been repainted. Other equipment drawings and screen captures remain labelled as manual references where suitable actual photographs are unavailable. Correct gripper alignment, camera/sponge contact and both tube-holding positions still require site footage; reference illustrations do not prove correct positioning on a station.
 
-Procedure source: supplied DeLaval VMS V300 Instruction Book §6.2 pp248–256; Manual (Closed Stall) §4.5.3 pp86–89; empty-stall test prerequisite §5.5.1 p240. This is an unofficial farmer-facing production. The adult comedy editions remain separate.
+The temporary stock voice blends 75% Puck and 25% Fenrir using Kokoro. It does not clone the speaker in “Reds HillBilly Shot.mp4”. The user authorised another funny voice for now; their own voice remains a future option. Engine/model sources and licence provenance are recorded in `temporary-voice-notes.json`. The old `Southern_Voice_Preview.mp3` filename is retained as an alias for this new preview.
 
-## Download access
-
-Sign into the GitHub account with access to `sjgffwjyr7-svg/worklog`, open a file link and choose **Download raw file**, then open the saved file on your computer. GitHub may return **404** to accounts without repository access.
+Source: uploaded DeLaval VMS V300 Instruction Book, §6.2 pp248–256; Manual (Closed Stall) §4.5.3 pp86–89; empty-stall test prerequisite §5.5.1 p240; handedness pp119–120. Follow the matching labels on the actual station. The adult comedy and ten voice samples remain separate exports.
