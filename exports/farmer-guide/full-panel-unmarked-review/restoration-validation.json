@@ -1,0 +1,94 @@
+{
+  "asset_label": "Retouched photo-based control reference; not recovered original photograph",
+  "method": "Image-generation tool removed annotations; only generated pixels inside reviewed cyan annotation mask were composited onto existing reference.",
+  "source": {
+    "path": "/workspace/vms300-video/figures/control-panel-entry-annotated.png",
+    "sha256": "d9a94689d5de74d20e939845ccc317e6d79ff1273d5c691a19358ed0422330ca"
+  },
+  "image_generated_candidate": {
+    "path": "/workspace/generated_images/exec-814adcfb-8c7b-4d77-9145-18decc97c998.png",
+    "sha256": "3302b7cada506319b8e84a764348cc85a5eb760cc8b1db8d7c492cbfbe2ea198"
+  },
+  "mask": {
+    "path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/cyan-annotation-mask.png",
+    "sha256": "b14578dc5677dd85bce567b76f1798200658d4d1f5a915beb0bfa0d1b302df96",
+    "area_pixels": 7493
+  },
+  "native_output": {
+    "path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed.png",
+    "dimensions": [
+      1672,
+      941
+    ],
+    "sha256": "f6553b8105a7030606dd26f3371828380c1cc5f7b4af0eb80121f5ef17fed11e"
+  },
+  "resized_output": {
+    "path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+    "dimensions": [
+      1600,
+      900
+    ],
+    "sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4"
+  },
+  "checks": {
+    "candidate_dimensions_match_source": true,
+    "outside_mask_pixels_identical": true,
+    "outside_mask_changed_pixels": 0,
+    "actual_changed_pixels": 7493,
+    "changed_bounds_xyxy_exclusive": [
+      526,
+      348,
+      647,
+      568
+    ],
+    "cyan_core_pixels_remaining": 0,
+    "native_file_lossless_roundtrip": true,
+    "protected_native_regions": {
+      "entrance_button": {
+        "category": "button_faces",
+        "identical": true
+      },
+      "teat_clean_button": {
+        "category": "button_faces",
+        "identical": true
+      },
+      "cancel_cross": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "entrance_gate_symbol": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "teat_clean_symbol": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "confirm_check": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "calibration_bracket_and_gear": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "mode_column_lamps_switch_stop": {
+        "category": "additional_controls",
+        "identical": true
+      },
+      "complete_right_movement_group": {
+        "category": "additional_controls",
+        "identical": true
+      },
+      "exit_gate_up_button_and_icon": {
+        "category": "additional_controls",
+        "identical": true
+      },
+      "feed_portion_down_button_and_icon": {
+        "category": "additional_controls",
+        "identical": true
+      }
+    }
+  },
+  "limitations": "Mechanical resizing naturally resamples pixels; pixel-identity checks apply to the native 1672x941 PNG. Existing top/bottom captions are unchanged and should be cropped out by the full-panel builder. No lamp states, control faces, printed symbols, or operational correctness have been invented."
+}

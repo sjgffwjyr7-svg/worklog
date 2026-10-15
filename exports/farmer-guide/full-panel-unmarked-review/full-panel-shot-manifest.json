@@ -1,0 +1,2171 @@
+[
+  {
+    "scene": 1,
+    "key": "welcome",
+    "cue": "Righto",
+    "title": "Line it up. Keep it working.",
+    "action": "FARMER\u2019S GUIDE",
+    "body": [
+      "Cup pickup",
+      "Camera cleaning",
+      "Both tube-holding positions"
+    ],
+    "source": "station",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 2,
+    "key": "safety",
+    "cue": "Only do this",
+    "title": "Keep clear of the arm",
+    "action": "BEFORE YOU START",
+    "body": [
+      "Only if you have been shown how to do this safely.",
+      "Enter the arm area only with the switch in Safe.",
+      "Stay out of stall and gate movement until remote control is blocked.",
+      "In Run, the arm can move at any time."
+    ],
+    "source": "arm",
+    "caution": "Lock blocks remote control. It does not stop the arm.",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 3,
+    "key": "run-switch",
+    "cue": "At the control box",
+    "title": "Set the mode switch to Run",
+    "action": "MODE SWITCH",
+    "body": [
+      "Set to Run if needed.",
+      "Keep clear of the arm."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        132,
+        274,
+        257,
+        354
+      ]
+    ],
+    "targets_output": [
+      [
+        212,
+        382,
+        352,
+        472
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 3,
+    "key": "run-lamp",
+    "cue": "Check the yellow light",
+    "title": "Check the yellow Run light",
+    "action": "CHECK THE LAMP",
+    "body": [
+      "Yellow light must be on.",
+      "The photo is an identification reference."
+    ],
+    "source": "panel",
+    "caution": "In Run, the arm can move at any time.",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        145,
+        354,
+        256,
+        455
+      ]
+    ],
+    "targets_output": [
+      [
+        226,
+        472,
+        351,
+        585
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 4,
+    "key": "station-select",
+    "cue": "On the InControl screen",
+    "title": "Select the correct station",
+    "action": "CHECK STATION",
+    "body": [
+      "Use your own station number.",
+      "Then open its robot mode menu."
+    ],
+    "source": "mode",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        112,
+        338,
+        349,
+        391
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 4,
+    "key": "manual-closed",
+    "cue": "Choose Manual",
+    "title": "Choose Manual (Closed Stall)",
+    "action": "SELECT THIS ROW",
+    "body": [
+      "Let the cow finish and leave."
+    ],
+    "source": "mode",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        58,
+        158,
+        442,
+        216
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 4,
+    "key": "wait-empty",
+    "cue": "Wait for an empty stall",
+    "title": "Wait before continuing",
+    "action": "EMPTY + MANUAL",
+    "body": [
+      "Stall empty.",
+      "Manual shown on your own screen."
+    ],
+    "source": "station",
+    "caution": "",
+    "note": "Actual empty-stall and Manual-status footage is not available in this edit.",
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 5,
+    "key": "press-lock",
+    "cue": "Press Lock",
+    "title": "Keep control at this robot",
+    "action": "PRESS LOCK",
+    "body": [
+      "Top white Lock button.",
+      "This prevents another screen taking control."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        143,
+        166,
+        254,
+        275
+      ]
+    ],
+    "targets_output": [
+      [
+        224,
+        261,
+        348,
+        383
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 5,
+    "key": "white-lock",
+    "cue": "Check the white Lock light",
+    "title": "Check the white Lock light",
+    "action": "CHECK ON YOUR ROBOT",
+    "body": [
+      "White Lock light ON.",
+      "Lock symbol on this robot\u2019s screen."
+    ],
+    "source": "panel",
+    "caution": "Lock does not stop arm movement.",
+    "note": "The reference photo does not demonstrate an illuminated lamp or screen status.",
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        143,
+        166,
+        254,
+        275
+      ]
+    ],
+    "targets_output": [
+      [
+        224,
+        261,
+        348,
+        383
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 6,
+    "key": "entry-warning",
+    "cue": "Keep clear",
+    "title": "The arm moves immediately",
+    "action": "KEEP CLEAR",
+    "body": [
+      "Calibration entry causes immediate movement.",
+      "Review the two buttons before pressing."
+    ],
+    "source": "panel",
+    "caution": "Keep clear of the arm before you start.",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [],
+    "targets_output": [],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 6,
+    "key": "entry-pair",
+    "cue": "On this panel",
+    "title": "Enter calibration mode",
+    "action": "PRESS TOGETHER",
+    "body": [
+      "LEFT GROUP: top-left + bottom-left",
+      "Entrance Gate + Teat Cleaning",
+      "The arm moves to teat cup 1."
+    ],
+    "source": "panel",
+    "caution": "The arm moves immediately. Keep clear.",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        501,
+        330,
+        624,
+        447
+      ],
+      [
+        501,
+        440,
+        624,
+        545
+      ]
+    ],
+    "targets_output": [
+      [
+        625,
+        445,
+        763,
+        576
+      ],
+      [
+        625,
+        568,
+        763,
+        686
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "bright/dim still examples ready",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 7,
+    "key": "arrow-functions",
+    "cue": "These buttons now",
+    "title": "The buttons have new jobs",
+    "action": "MOVE ACROSS",
+    "body": [
+      "RIGHT GROUP: four printed diagonal arrows.",
+      "Follow the arrows on your own panel."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        978,
+        269,
+        1336,
+        615
+      ]
+    ],
+    "targets_output": [
+      [
+        1159,
+        377,
+        1560,
+        764
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 7,
+    "key": "up-function",
+    "cue": "Exit Gate moves",
+    "title": "Exit Gate now means UP",
+    "action": "UP",
+    "body": [
+      "LEFT GROUP: top-right",
+      "Moves the arm up."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        627,
+        338,
+        727,
+        441
+      ]
+    ],
+    "targets_output": [
+      [
+        766,
+        454,
+        878,
+        569
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 7,
+    "key": "down-function",
+    "cue": "Feed Portion moves",
+    "title": "Feed Portion now means DOWN",
+    "action": "DOWN",
+    "body": [
+      "LEFT GROUP: bottom-right",
+      "Moves the arm down."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        627,
+        443,
+        727,
+        545
+      ]
+    ],
+    "targets_output": [
+      [
+        766,
+        572,
+        878,
+        686
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 7,
+    "key": "confirm-function",
+    "cue": "Teat Cleaning is Confirm",
+    "title": "Teat Cleaning now means CONFIRM",
+    "action": "CONFIRM",
+    "body": [
+      "LEFT GROUP: bottom-left",
+      "Tap to check. Hold to accept."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        439,
+        624,
+        546
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        567,
+        763,
+        687
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 7,
+    "key": "cancel-function",
+    "cue": "Entrance Gate is Cancel",
+    "title": "Entrance Gate now means CANCEL",
+    "action": "CANCEL",
+    "body": [
+      "LEFT GROUP: top-left",
+      "Keeps the existing position."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        330,
+        624,
+        446
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        445,
+        763,
+        575
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 8,
+    "key": "first-alignment",
+    "cue": "Check how the gripper",
+    "title": "Check the first cup position",
+    "action": "CHECK ALIGNMENT",
+    "body": [
+      "Look at the gripper and cup handle together.",
+      "This illustration identifies the gripper only."
+    ],
+    "source": "gripper",
+    "caution": "Actual correct alignment is not shown in this edit.",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 8,
+    "key": "tap-confirm",
+    "cue": "Tap Confirm once",
+    "title": "Check the gripper",
+    "action": "TAP ONCE",
+    "body": [
+      "Confirm = bottom-left of LEFT GROUP",
+      "The gripper clicks."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        439,
+        624,
+        546
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        567,
+        763,
+        687
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "bright/dim still examples ready",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 8,
+    "key": "hold-confirm",
+    "cue": "If the position is right",
+    "title": "Accept a correct position",
+    "action": "PRESS AND HOLD",
+    "body": [
+      "Confirm = bottom-left of LEFT GROUP",
+      "Accepts the position and moves to the next."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        439,
+        624,
+        546
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        567,
+        763,
+        687
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 9,
+    "key": "arrow-adjust",
+    "cue": "Need an adjustment",
+    "title": "Make small adjustments",
+    "action": "ARROW BUTTONS",
+    "body": [
+      "Tap for a small move across.",
+      "Holding keeps the arm moving."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        978,
+        269,
+        1336,
+        615
+      ]
+    ],
+    "targets_output": [
+      [
+        1159,
+        377,
+        1560,
+        764
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 9,
+    "key": "height-adjust",
+    "cue": "Use Up or Down",
+    "title": "Adjust the height",
+    "action": "UP / DOWN",
+    "body": [
+      "LEFT GROUP: top-right = UP",
+      "LEFT GROUP: bottom-right = DOWN"
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        627,
+        338,
+        727,
+        441
+      ],
+      [
+        627,
+        443,
+        727,
+        545
+      ]
+    ],
+    "targets_output": [
+      [
+        766,
+        454,
+        878,
+        569
+      ],
+      [
+        766,
+        572,
+        878,
+        686
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 9,
+    "key": "tap-recheck",
+    "cue": "Tap Confirm and check",
+    "title": "Check again after moving",
+    "action": "TAP ONCE",
+    "body": [
+      "Tap Confirm, then check the gripper again."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        439,
+        624,
+        546
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        567,
+        763,
+        687
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 9,
+    "key": "hold-accept",
+    "cue": "When it's right",
+    "title": "Accept only when it is right",
+    "action": "PRESS AND HOLD",
+    "body": [
+      "Hold Confirm to move on.",
+      "Make small corrections."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        439,
+        624,
+        546
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        567,
+        763,
+        687
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 10,
+    "key": "remaining-cups",
+    "cue": "Repeat for the remaining",
+    "title": "Complete every pickup position",
+    "action": "REPEAT THE CHECK",
+    "body": [
+      "Remaining milk cups",
+      "Teat-cleaning cup"
+    ],
+    "source": "cups",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 10,
+    "key": "cancel-existing",
+    "cue": "Cancel keeps",
+    "title": "Keep an existing position",
+    "action": "CANCEL",
+    "body": [
+      "Entrance Gate = top-left of LEFT GROUP",
+      "Cancel keeps the existing position."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        330,
+        624,
+        446
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        445,
+        763,
+        575
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 11,
+    "key": "camera-position",
+    "cue": "After the teat cleaning cup",
+    "title": "Set camera cleaning",
+    "action": "GENTLE CONTACT",
+    "body": [
+      "The glass must press gently against the sponge.",
+      "Too much can damage glass. Too little cleans poorly."
+    ],
+    "source": "gripper",
+    "caution": "Actual camera-glass / sponge contact is not shown.",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 11,
+    "key": "camera-adjust",
+    "cue": "Adjust with the same arrows",
+    "title": "Adjust, then accept",
+    "action": "ARROW BUTTONS",
+    "body": [
+      "Adjust camera cleaning with the same arrows."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        978,
+        269,
+        1336,
+        615
+      ]
+    ],
+    "targets_output": [
+      [
+        1159,
+        377,
+        1560,
+        764
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 11,
+    "key": "camera-confirm",
+    "cue": "then press and hold Confirm",
+    "title": "Accept camera cleaning position",
+    "action": "PRESS AND HOLD",
+    "body": [
+      "Hold Confirm when gentle contact is right.",
+      "Do not force the glass against the sponge."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        439,
+        624,
+        546
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        567,
+        763,
+        687
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 12,
+    "key": "tube-check",
+    "cue": "Check the arm's tube supports",
+    "title": "Set both tube-holding positions",
+    "action": "POSITION 1 \u2192 POSITION 2",
+    "body": [
+      "Check horns against tubes in the rack.",
+      "Use the same arrows to adjust."
+    ],
+    "source": "cups",
+    "caution": "Actual horn / tube relationships are not shown.",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 12,
+    "key": "tube-confirm",
+    "cue": "then press and hold Confirm",
+    "title": "Accept the first tube position",
+    "action": "PRESS AND HOLD",
+    "body": [
+      "Hold Confirm when position 1 is correct."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        439,
+        624,
+        546
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        567,
+        763,
+        687
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 12,
+    "key": "tube-second",
+    "cue": "Repeat for the second",
+    "title": "Repeat for the second position",
+    "action": "POSITION 2",
+    "body": [
+      "Adjust if needed. Hold Confirm to accept.",
+      "Then the arm returns and the screen shows Manual."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": "Check actual position and Manual status on your robot; they are not demonstrated here.",
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        500,
+        439,
+        624,
+        546
+      ]
+    ],
+    "targets_output": [
+      [
+        624,
+        567,
+        763,
+        687
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 13,
+    "key": "tests-clear",
+    "cue": "Time to check our homework",
+    "title": "Test before finishing",
+    "action": "EMPTY STALL + KEEP CLEAR",
+    "body": [
+      "Keep the stall empty.",
+      "Keep everyone clear of the arm."
+    ],
+    "source": "test",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 13,
+    "key": "maintenance",
+    "cue": "On the InControl screen",
+    "title": "Open Maintenance",
+    "action": "MAINTENANCE",
+    "body": [
+      "Select the wrench tab."
+    ],
+    "source": "test",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        433,
+        30,
+        489,
+        64
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 13,
+    "key": "test-menu",
+    "cue": "then Test",
+    "title": "Open Test",
+    "action": "TEST",
+    "body": [
+      "Select Test in the Robot section."
+    ],
+    "source": "test",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        45,
+        82,
+        452,
+        119
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 13,
+    "key": "milk-cups",
+    "cue": "Tap Milk Cups",
+    "title": "Test the milk cups",
+    "action": "MILK CUPS",
+    "body": [
+      "Watch each pickup and release."
+    ],
+    "source": "test",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        277,
+        225,
+        469,
+        265
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 13,
+    "key": "teat-test",
+    "cue": "Also test Teat Cleaning Cup",
+    "title": "Test the teat-cleaning cup",
+    "action": "TEAT CLEANING CUP",
+    "body": [
+      "Watch its pickup and release."
+    ],
+    "source": "test",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        277,
+        301,
+        469,
+        340
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 13,
+    "key": "individual-test",
+    "cue": "Buttons one to four",
+    "title": "Test individual milk cups",
+    "action": "BUTTONS 1\u20134",
+    "body": [
+      "Each number tests one milk cup.",
+      "Observe pickup and release."
+    ],
+    "source": "test",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        277,
+        263,
+        469,
+        301
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 14,
+    "key": "camera-test",
+    "cue": "Tap Camera Cleaning",
+    "title": "Test camera cleaning",
+    "action": "CAMERA CLEANING",
+    "body": [
+      "Watch sponge cleaning, rinsing and return."
+    ],
+    "source": "test",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        277,
+        356,
+        469,
+        395
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 14,
+    "key": "hold-tubes-test",
+    "cue": "Tap Hold Tubes",
+    "title": "Test tube holding",
+    "action": "HOLD TUBES",
+    "body": [
+      "Watch the arm move into position and return.",
+      "Check both tasks work correctly."
+    ],
+    "source": "test",
+    "caution": "",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        277,
+        393,
+        469,
+        433
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 14,
+    "key": "service",
+    "cue": "If the arm shakes",
+    "title": "Stop and call for help if needed",
+    "action": "CONTACT DELAVAL SERVICE",
+    "body": [
+      "Arm shakes?",
+      "Jerky movement?",
+      "Contact DeLaval service."
+    ],
+    "source": "test",
+    "caution": "Do not finish until the tasks work correctly.",
+    "note": null,
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  },
+  {
+    "scene": 15,
+    "key": "unlock",
+    "cue": "When the checks are complete",
+    "title": "Release the control lock",
+    "action": "PRESS LOCK AGAIN",
+    "body": [
+      "Press the top Lock button again."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": null,
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        143,
+        166,
+        254,
+        275
+      ]
+    ],
+    "targets_output": [
+      [
+        224,
+        261,
+        348,
+        383
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 15,
+    "key": "unlock-check",
+    "cue": "Check the white light goes off",
+    "title": "Check that Lock is released",
+    "action": "CHECK LIGHT OFF",
+    "body": [
+      "White Lock light must be OFF.",
+      "Check the actual lamp on your robot."
+    ],
+    "source": "panel",
+    "caution": "",
+    "note": "Lamp state is not changed or simulated in this reference photo.",
+    "layout": "fixed full controller",
+    "panel_layout": {
+      "canvas": [
+        1920,
+        1080
+      ],
+      "source_path": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/control-panel-annotations-removed-1600x900.png",
+      "source_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+      "source_type": "Retouched photo-derived reference; not a recovered original photograph",
+      "source_crop": [
+        0,
+        80,
+        1600,
+        780
+      ],
+      "image_origin": [
+        64,
+        165
+      ],
+      "image_dimensions": [
+        1792,
+        784
+      ],
+      "image_bounds": [
+        64,
+        165,
+        1856,
+        949
+      ],
+      "scale": 1.12,
+      "fixed_for_all_panel_shots": true,
+      "whole_controller_visible": true,
+      "crop_explanation": "Only old title/caption bands removed; every controller group remains visible.",
+      "source_edit_scope": "Added cyan annotation strokes only; validated native composition preserves every pixel outside their reviewed mask.",
+      "source_validation_report": "/workspace/vms300-video/farmer-full-panel-review/source-restoration/restoration-validation.json",
+      "composition_changes_control_faces_symbols_lamps": false
+    },
+    "targets_source": [
+      [
+        143,
+        166,
+        254,
+        275
+      ]
+    ],
+    "targets_output": [
+      [
+        224,
+        261,
+        348,
+        383
+      ]
+    ],
+    "highlight_only_required_targets": true,
+    "highlight_style": "Yellow identification outline: bright/dim for target pulse, steady for PRESS AND HOLD, two targets for PRESS TOGETHER.",
+    "no_button_press_or_lamp_state_simulated": true,
+    "source_status": "Validated retouched photo-derived reference available; clean original photograph is not claimed.",
+    "render_state": "planned only \u2014 no still rendered",
+    "portable_working_reference": "Controller_Working_Reference_Unmarked_1600x900.png"
+  },
+  {
+    "scene": 15,
+    "key": "final-mode",
+    "cue": "Choose the intended operating mode",
+    "title": "Choose the intended operating mode",
+    "action": "FINISH",
+    "body": [
+      "Choose the mode you intend the robot to use.",
+      "The control lock stays on until you release it."
+    ],
+    "source": "mode",
+    "caution": "",
+    "note": "Reference menu only. Choose the intended mode on your own station.",
+    "layout": "non-panel reference cue preserved; no new still generated",
+    "render_state": "reference cue retained",
+    "targets_source": [
+      [
+        58,
+        45,
+        443,
+        275
+      ]
+    ],
+    "source_note": "Existing screen and equipment manual references remain labelled; not claimed to be actual site photographs."
+  }
+]
