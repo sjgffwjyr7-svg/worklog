@@ -1,0 +1,62 @@
+{
+  "canvas": [
+    1920,
+    1080
+  ],
+  "source_path": "/workspace/vms300-video/farmer-humour/photo-assets/VMS300_Controller_Panel_Annotated.jpg",
+  "source_sha256": "d8aa8f39c3cec8368e4873ffad23cd7df2d4cd2b99bb5d841ece17b339acdf8b",
+  "source_type": "Existing generated photo-derived control graphic; not a clean original photograph",
+  "source_crop": [
+    0,
+    80,
+    1600,
+    780
+  ],
+  "removed_from_source": "Only the existing top and bottom text bands; all controller hardware retained",
+  "image_origin": [
+    64,
+    165
+  ],
+  "image_dimensions": [
+    1792,
+    784
+  ],
+  "image_bounds": [
+    64,
+    165,
+    1856,
+    949
+  ],
+  "scale": 1.12,
+  "fixed_for_all_panel_shots": true,
+  "repainting_or_inpainting": false,
+  "source_content_changed": false,
+  "entry_pair_targets_source": [
+    [
+      501,
+      330,
+      624,
+      447
+    ],
+    [
+      501,
+      440,
+      624,
+      545
+    ]
+  ],
+  "entry_pair_targets_output": [
+    [
+      625,
+      445,
+      763,
+      576
+    ],
+    [
+      625,
+      568,
+      763,
+      686
+    ]
+  ]
+}
