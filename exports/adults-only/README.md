@@ -1,22 +1,20 @@
-# Farm Robot: After Hours — Adults-only stand-up parody
+# DeLaval robots and dairy equipment — Adult comedy slideshow
 
-An entirely new fictional farm comedy, replacing the earlier adults-only instructional cut. Strong language, crude relationship jokes, imaginary robot modes, and deliberately corrected verbal bloopers.
+The current **3:52 adult farm-comedy voiceover**, now accompanied by **12 DeLaval equipment slides** with gentle cross-dissolves.
 
-- [Download the comedy MP4](VMS300_Adults_Only.mp4)
-- [Download the comedy voiceover MP3](VMS300_Adults_Only_Voiceover.mp3)
-- [Read the full routine](narration-script.md)
-- [Download English subtitles](narration.srt)
+- [Download the slideshow MP4](DeLaval_Equipment_Slideshow.mp4)
+- [Download the existing voiceover MP3](VMS300_Adults_Only_Voiceover.mp3)
+- [Read the comedy narration](narration-script.md)
+- [Equipment illustrations and page credits](equipment-illustration-credits.md)
 
-The video is approximately **3 minutes 52 seconds**, at **1920 × 1080**, with H.264 video, AAC sound, and selectable English subtitles. Sentence subtitle timings are approximate.
+The slideshow features the VMS V300 station, robot arm, cup magazine, camera/gripper, feed dispensers, cleaning containers, milk filter, hydraulic equipment and dairy gates. The images are **technical illustrations extracted from the supplied DeLaval V300 Instruction Book**, not photographs. Captions identify the actual equipment and source pages.
 
-The new original synthetic American comic narrator uses stock Puck and Eric voice bases, a quicker setup, brief pauses and slower punchlines. It does not imitate or reproduce the voice of a real actor or comedian.
+The comedy story, jokes and original synthetic American comic voice are unchanged. Audio and subtitle packets are copied from the previous comedy cut without re-encoding. Invented robot modes remain fictional jokes, and the visuals label the story as adult comedy. This is entertainment, not a calibration demonstration or an official manufacturer production.
 
-The story includes **Pretend We Fixed It**, **Bank Manager Mode**, **Divorce Mode**, a robot demanding a holiday, and Brenda the cow taking over management. These are invented jokes. The stage graphics show an original cartoon robot, with no actual equipment panels, manufacturer interface or operating sequence. Every scene is labelled as fictional parody. This version is entertainment rather than a machine operating guide.
+Format: **1920 × 1080**, H.264 video, AAC audio, selectable English subtitles. Sentence subtitle timings are approximate.
 
-The original farmer instructional video remains at [`exports/VMS300_Farmer_Guide.mp4`](../VMS300_Farmer_Guide.mp4). The earlier adults-only instructional cut remains available in [its prior Git commit](https://github.com/sjgffwjyr7-svg/worklog/tree/f05f3d0ec60f3d6f09037778f2606613ad06bb55/exports/adults-only).
+The original farmer instructional guide remains at [`exports/VMS300_Farmer_Guide.mp4`](../VMS300_Farmer_Guide.mp4). The earlier cartoon-stage parody remains available in [its previous Git commit](https://github.com/sjgffwjyr7-svg/worklog/tree/fde71ea48ee62f76aa3353a18e8fc7977a153cdf/exports/adults-only).
 
 ## Download access
 
-Sign into a GitHub account that has access to `sjgffwjyr7-svg/worklog`. Open a file above, select **Download raw file**, then open the saved file on your computer. An account without repository access may receive a **404**, even though the file exists. A new upload does not change repository access.
-
-This is an unofficial user-requested comedy production.
+Sign into the GitHub account with access to `sjgffwjyr7-svg/worklog`. Open the MP4 link and choose **Download raw file**, then open the saved file on your computer. GitHub may return **404** to accounts without repository access. Uploading this revision does not change those permissions.

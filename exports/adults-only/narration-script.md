@@ -2,7 +2,7 @@
 
 **Fictional comedy, not an operating guide.** Strong language, crude jokes, mild adult innuendo and deliberate verbal bloopers.
 
-An entirely new routine with made-up modes and imaginary controls. It does not describe or demonstrate an actual calibration procedure. No real machine controls, operating diagrams or operational sequences appear in the visuals.
+An entirely new routine with made-up modes and imaginary controls. It does not describe or demonstrate an actual calibration procedure. This slideshow uses genuine DeLaval manual hardware illustrations as the visual background; its invented comedy modes do not describe the equipment or its operating procedure.
 
 Narrator: an original synthetic American comic voice blended from stock Puck and Eric voices, with quicker delivery and pauses before punchlines. It does not imitate a real actor or comedian. No celebrity voice recording or likeness was used.
 
