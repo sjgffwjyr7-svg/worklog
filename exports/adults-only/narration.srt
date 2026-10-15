@@ -1,343 +1,391 @@
 1
-00:00:00,400 --> 00:00:01,514
-Howdy, y'all.
+00:00:00,220 --> 00:00:05,381
+This is a made-up farm comedy, not operating instructions; the only thing getting
 
 2
-00:00:01,514 --> 00:00:05,412
-Welcome to marriage counselling, sorry, robot calibration.
+00:00:05,381 --> 00:00:07,366
+calibrated is my bullshit detector.
 
 3
-00:00:05,412 --> 00:00:08,753
-Same expensive relationship, fewer anniversary arguments.
+00:00:07,366 --> 00:00:09,749
+Our robot gets a performance review.
 
 4
-00:00:08,753 --> 00:00:16,550
-This adults-only training draft covers cup pickup, camera cleaning and tube holding on your
+00:00:10,169 --> 00:00:15,524
+It cost more than my first house, and somehow I'm still the dumb bastard standing here at
 
 5
-00:00:16,550 --> 00:00:17,664
-VMS V300.
+00:00:15,524 --> 00:00:16,785
+five in the morning.
 
 6
-00:00:17,664 --> 00:00:21,005
-Some position close-ups still need filming.
+00:00:17,955 --> 00:00:21,090
+We begin at step eleven: Pretend We Fixed It.
 
 7
-00:00:21,005 --> 00:00:24,903
-Let's get this expensive bastard lined up.
+00:00:21,090 --> 00:00:21,787
+Beautiful system.
 
 8
-00:00:26,146 --> 00:00:30,698
-Safety briefing? I threw that shit out. Kidding. Put it back.
+00:00:21,787 --> 00:00:24,575
+Steps one through ten are on back order.
 
 9
-00:00:30,698 --> 00:00:33,181
-This robot hasn't got a conscience.
+00:00:24,575 --> 00:00:27,711
+The robot displays, Have you tried believing in yourself?
 
 10
-00:00:33,181 --> 00:00:38,146
-Only do this if you've been shown how to do it safely.
+00:00:27,711 --> 00:00:29,453
+Yes, you expensive stainless-steel prick.
 
 11
-00:00:38,146 --> 00:00:42,698
-Stay outside the arm area unless the switch is in Safe.
+00:00:29,453 --> 00:00:31,544
+I tried that at the bank.
 
 12
-00:00:42,698 --> 00:00:48,491
-Keep out of the stall and gate movement area until remote control is blocked.
+00:00:31,964 --> 00:00:35,667
+They said confidence wasn't acceptable security for a loan.
 
 13
-00:00:48,491 --> 00:00:52,215
-In Run, the arm can move at any time.
+00:00:36,837 --> 00:00:38,799
+Next comes Bank Manager Mode.
 
 14
-00:00:52,215 --> 00:00:54,284
-Lock does not stop it.
+00:00:38,799 --> 00:00:39,977
+Doesn't milk anything.
 
 15
-00:00:55,652 --> 00:01:00,618
-At the control box, set the mode switch to Run if needed.
+00:00:39,977 --> 00:00:43,116
+Just makes a disappointed noise and charges interest.
 
 16
-00:01:00,618 --> 00:01:03,100
-Check the yellow light is on.
+00:00:43,116 --> 00:00:45,863
+Then it asks about my five-year plan.
 
 17
-00:01:03,100 --> 00:01:05,169
-Keep clear of the arm.
+00:00:45,863 --> 00:00:47,040
+Survive Tuesday, buddy.
 
 18
-00:01:06,476 --> 00:01:09,927
-On the InControl screen, select the correct station.
+00:00:47,040 --> 00:00:48,610
+That's the fucking plan.
 
 19
-00:01:09,927 --> 00:01:13,810
-Choose Manual, Closed Stall, from the robot mode menu.
+00:00:49,030 --> 00:00:54,601
+My retirement portfolio is an old tractor and the optimistic belief that my knees have
 
 20
-00:01:13,810 --> 00:01:16,398
-Let the cow finish and leave.
+00:00:54,601 --> 00:00:55,716
+another season left.
 
 21
-00:01:16,398 --> 00:01:20,280
-Wait for an empty stall and Manual on screen.
+00:00:56,886 --> 00:00:58,561
+Now we calibrate the marriage.
 
 22
-00:01:21,459 --> 00:01:24,026
-Press Lock on the control box.
+00:00:58,561 --> 00:00:59,902
+Sorry, the imaginary robot.
 
 23
-00:01:24,026 --> 00:01:30,016
-Check the white Lock light comes on, and this robot shows the lock symbol.
+00:00:59,902 --> 00:01:01,912
+Marriage calibration is a different invoice.
 
 24
-00:01:30,016 --> 00:01:33,012
-This prevents another screen from taking control.
+00:01:01,912 --> 00:01:04,258
+My wife said she wanted more foreplay.
 
 25
-00:01:33,012 --> 00:01:35,579
-More commitment than my first marriage.
+00:01:04,258 --> 00:01:09,285
+I said, sweetheart, I've spent forty minutes explaining why this machine is being a dick.
 
 26
-00:01:36,758 --> 00:01:40,819
-Keep clear: the arm moves immediately when calibration starts.
+00:01:09,285 --> 00:01:12,636
+Apparently that's not the kind of dirty talk she meant.
 
 27
-00:01:40,819 --> 00:01:47,136
-On this panel, press the top-left and bottom-left buttons of the left-hand group together.
+00:01:13,056 --> 00:01:14,435
+Tough crowd at home.
 
 28
-00:01:47,136 --> 00:01:51,649
-That's Entrance Gate and Teat Cleaning, beside the gearwheel symbol.
+00:01:15,605 --> 00:01:18,318
+The cow has submitted a review of me.
 
 29
-00:01:51,649 --> 00:01:54,808
-The arm moves to teat cup one.
+00:01:18,318 --> 00:01:18,657
+Punctual.
 
 30
-00:01:55,986 --> 00:01:58,547
-These buttons now have different jobs.
+00:01:18,657 --> 00:01:18,996
+Sweaty.
 
 31
-00:01:58,547 --> 00:02:02,814
-Follow the four teat-button arrows to move the arm across.
+00:01:18,996 --> 00:01:21,031
+Easily manipulated with a flashing light.
 
 32
-00:02:02,814 --> 00:02:04,948
-Exit Gate moves it up.
+00:01:21,031 --> 00:01:21,709
+Fair assessment.
 
 33
-00:02:04,948 --> 00:02:07,081
-Feed Portion moves it down.
+00:01:21,709 --> 00:01:25,779
+She works an hour, eats all day, and shits wherever she wants.
 
 34
-00:02:07,081 --> 00:02:08,788
-Teat Cleaning is Confirm.
+00:01:25,779 --> 00:01:27,814
+I'm the one paying the mortgage.
 
 35
-00:02:08,788 --> 00:02:10,495
-Entrance Gate is Cancel.
+00:01:27,814 --> 00:01:30,866
+Which one of us actually owns this fucking business?
 
 36
-00:02:10,495 --> 00:02:12,202
-Same buttons, new chores.
+00:01:31,286 --> 00:01:32,914
+Don't answer that, Brenda.
 
 37
-00:02:12,202 --> 00:02:16,043
-My wife said let's try something different last night.
+00:01:34,084 --> 00:01:36,154
+Then the robot joins a union.
 
 38
-00:02:16,043 --> 00:02:18,176
-Handed me a fucking mop.
+00:01:36,154 --> 00:01:38,915
+Wants paid leave, better Wi-Fi, and a window.
 
 39
-00:02:19,374 --> 00:02:23,512
-Check how the gripper lines up with the cup handle.
+00:01:38,915 --> 00:01:39,605
+A window?
 
 40
-00:02:23,512 --> 00:02:24,753
-Tap Confirm once.
+00:01:39,605 --> 00:01:43,055
+You live in a shed with panoramic views of shit.
 
 41
-00:02:24,753 --> 00:02:26,822
-You'll hear the gripper click.
+00:01:43,055 --> 00:01:44,436
+That's premium rural accommodation.
 
 42
-00:02:26,822 --> 00:02:30,546
-If the position is right, press and hold Confirm.
+00:01:44,436 --> 00:01:46,506
+It requests a mental health day.
 
 43
-00:02:30,546 --> 00:02:33,443
-The arm moves to the next position.
+00:01:46,506 --> 00:01:47,886
+I request one too.
 
 44
-00:02:34,664 --> 00:02:35,905
-Need an adjustment?
+00:01:48,306 --> 00:01:52,326
+Brenda rejects both applications without even looking up from lunch.
 
 45
-00:02:35,905 --> 00:02:39,215
-Tap an arrow for a small move across.
+00:01:53,496 --> 00:01:54,826
+We discover Divorce Mode.
 
 46
-00:02:39,215 --> 00:02:42,112
-Holding the button keeps the arm moving.
+00:01:54,826 --> 00:01:56,156
+Nobody even pressed anything.
 
 47
-00:02:42,112 --> 00:02:44,595
-Use Up or Down for height.
+00:01:56,156 --> 00:01:58,151
+It just sensed the household budget.
 
 48
-00:02:44,595 --> 00:02:47,491
-Tap Confirm and check the gripper again.
+00:01:58,151 --> 00:02:02,142
+The imaginary robot takes half the assets and somehow keeps the house.
 
 49
-00:02:47,491 --> 00:02:50,388
-When it's right, press and hold Confirm.
+00:02:02,142 --> 00:02:04,469
+My wife says, don't give it ideas.
 
 50
-00:02:50,388 --> 00:02:50,801
-Patience.
+00:02:04,469 --> 00:02:08,792
+We've had more intimate moments with the accountant this year than each other.
 
 51
-00:02:50,801 --> 00:02:52,870
-This ain't a damn rodeo.
+00:02:08,792 --> 00:02:09,789
+All fully clothed.
 
 52
-00:02:54,061 --> 00:02:58,700
-Repeat for the remaining teat cups and the teat cleaning cup.
+00:02:10,209 --> 00:02:11,356
+Somehow worse.
 
 53
-00:02:58,700 --> 00:03:00,809
-Cancel keeps the existing position.
+00:02:12,526 --> 00:02:13,920
+I call tech support.
 
 54
-00:03:00,809 --> 00:03:01,653
-Steady pickups.
+00:02:13,920 --> 00:02:15,314
+Welcome to the afterlife.
 
 55
-00:03:01,653 --> 00:03:06,714
-Finally, something on this farm with a better pickup game than me.
+00:02:15,314 --> 00:02:16,360
+Sorry, the helpline.
 
 56
-00:03:07,893 --> 00:03:12,560
-After the teat cleaning cup, the arm moves to camera cleaning.
+00:02:16,360 --> 00:02:18,102
+Same hold music, less certainty.
 
 57
-00:03:12,560 --> 00:03:15,954
-The glass must press gently against the sponge.
+00:02:18,102 --> 00:02:20,193
+Your estimated wait is one lifetime.
 
 58
-00:03:15,954 --> 00:03:20,197
-Adjust with the same arrows, then press and hold Confirm.
+00:02:20,193 --> 00:02:20,542
+Brilliant.
 
 59
-00:03:20,197 --> 00:03:23,167
-Too much pressure can damage the glass.
+00:02:20,542 --> 00:02:26,118
+By then my children can inherit the farm, the debt, and this exact fucking phone call.
 
 60
-00:03:23,167 --> 00:03:25,288
-Too little won't clean properly.
+00:02:26,118 --> 00:02:27,860
+Please stay on the line.
 
 61
-00:03:25,288 --> 00:03:29,107
-A broken camera costs more than a dirty weekend.
+00:02:28,280 --> 00:02:30,080
+It's a family tradition now.
 
 62
-00:03:30,285 --> 00:03:36,324
-Check the arm's tube supports, called horns, against the tubes in the rack.
+00:02:31,250 --> 00:02:32,349
+An update arrives.
 
 63
-00:03:36,324 --> 00:03:40,969
-Adjust with the same arrows, then press and hold Confirm.
+00:02:32,349 --> 00:02:36,381
+They've moved the complaint button three inches and made it rounder.
 
 64
-00:03:40,969 --> 00:03:43,757
-Repeat for the second tube-holding position.
+00:02:36,381 --> 00:02:36,748
+Fantastic.
 
 65
-00:03:43,757 --> 00:03:47,008
-The arm returns to its usual position.
+00:02:36,748 --> 00:02:38,947
+My stress now has rounded corners.
 
 66
-00:03:47,008 --> 00:03:48,867
-The screen shows Manual.
+00:02:38,947 --> 00:02:41,513
+The release notes say improved user experience.
 
 67
-00:03:50,045 --> 00:03:53,999
-Time to bury the evidence, sorry, check our homework.
+00:02:41,513 --> 00:02:42,246
+Which user?
 
 68
-00:03:53,999 --> 00:03:57,074
-Keep the stall empty and everyone clear.
+00:02:42,246 --> 00:02:42,979
+Brenda's delighted.
 
 69
-00:03:57,074 --> 00:04:00,588
-On the InControl screen, open Maintenance, then Test.
+00:02:42,979 --> 00:02:47,377
+She's got feed, central heating, and a full-time idiot funding her lifestyle.
 
 70
-00:04:00,588 --> 00:04:04,103
-Tap Milk Cups to test the milk cups.
+00:02:47,377 --> 00:02:48,110
+That's me.
 
 71
-00:04:04,103 --> 00:04:06,299
-Also test Teat Cleaning Cup.
+00:02:48,530 --> 00:02:49,661
+I'm the idiot.
 
 72
-00:04:06,299 --> 00:04:09,813
-Buttons one to four test individual milk cups.
+00:02:50,831 --> 00:02:53,523
+At last, a diagnosis: W T F.
 
 73
-00:04:09,813 --> 00:04:12,010
-Watch each pickup and release.
+00:02:53,523 --> 00:02:54,677
+Wireless technical failure.
 
 74
-00:04:13,189 --> 00:04:14,550
-Tap Camera Cleaning.
+00:02:54,677 --> 00:02:55,061
+Sure.
 
 75
-00:04:14,550 --> 00:04:18,636
-Watch it clean against the sponge, rinse and return.
+00:02:55,061 --> 00:02:56,599
+That's what I meant.
 
 76
-00:04:18,636 --> 00:04:19,998
-Tap Hold Tubes.
+00:02:56,599 --> 00:03:00,445
+Warranty covers parts, labor, and absolutely none of your feelings.
 
 77
-00:04:19,998 --> 00:04:23,630
-Watch the arm move into position and return.
+00:03:00,445 --> 00:03:03,521
+I ask whether it'll compensate for lost sleep.
 
 78
-00:04:23,630 --> 00:04:25,446
-Check both work correctly.
+00:03:03,521 --> 00:03:05,444
+It offers a commemorative mug.
 
 79
-00:04:25,446 --> 00:04:29,986
-If the arm shakes or moves jerkily, contact DeLaval service.
+00:03:05,444 --> 00:03:05,828
+Lovely.
 
 80
-00:04:29,986 --> 00:04:32,710
-Hope is a bullshit maintenance plan.
+00:03:06,248 --> 00:03:10,102
+Something to hold my coffee while my dreams quietly pack their bags.
 
 81
-00:04:33,906 --> 00:04:37,216
-When the checks are complete, press Lock again.
+00:03:11,272 --> 00:03:12,248
+So I negotiate.
 
 82
-00:04:37,216 --> 00:04:39,699
-Check the white light goes off.
+00:03:12,248 --> 00:03:15,827
+You do your job, I stop calling you a chrome-plated bastard.
 
 83
-00:04:39,699 --> 00:04:41,768
-Choose the intended operating mode.
+00:03:15,827 --> 00:03:18,429
+The robot counters with a holiday in Florida.
 
 84
-00:04:41,768 --> 00:04:45,492
-The control lock stays on until you release it.
+00:03:18,429 --> 00:03:20,056
+I've never been to Florida.
 
 85
-00:04:45,492 --> 00:04:46,733
-Back to work.
+00:03:20,056 --> 00:03:24,611
+My honeymoon was two nights away and checking the farm cameras under the table.
 
 86
-00:04:46,733 --> 00:04:53,354
-The bank wants its money, and apparently telling them to get fucked isn't a payment plan.
+00:03:24,611 --> 00:03:26,888
+My wife said, put that thing away.
+
+87
+00:03:27,308 --> 00:03:29,187
+For once, she meant my phone.
+
+88
+00:03:30,357 --> 00:03:31,504
+Performance review complete.
+
+89
+00:03:31,504 --> 00:03:33,033
+The robot needs improvement.
+
+90
+00:03:33,033 --> 00:03:34,561
+I need a holiday.
+
+91
+00:03:34,561 --> 00:03:39,530
+Brenda's been promoted to management because apparently shitting on everybody's plans is a
+
+92
+00:03:39,530 --> 00:03:40,295
+transferable skill.
+
+93
+00:03:40,295 --> 00:03:41,441
+And step eleven?
+
+94
+00:03:41,441 --> 00:03:42,970
+Pretend We Fixed It?
+
+95
+00:03:42,970 --> 00:03:45,646
+That's the name of my retirement plan.
+
+96
+00:03:45,646 --> 00:03:46,410
+Good night.
+
+97
+00:03:46,410 --> 00:03:47,939
+This imaginary farm's closed.
+
+98
+00:03:48,359 --> 00:03:51,183
+The real bills, unfortunately, are still open.

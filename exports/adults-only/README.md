@@ -1,18 +1,22 @@
-# VMS300 — Adults-only instructional cut
+# Farm Robot: After Hours — Adults-only stand-up parody
 
-A separate farmer-facing cut of the robot arm position recalibration guide, with the current synthetic American country narrator, strong language, crude humour, mild adult innuendo and immediately corrected verbal bloopers.
+An entirely new fictional farm comedy, replacing the earlier adults-only instructional cut. Strong language, crude relationship jokes, imaginary robot modes, and deliberately corrected verbal bloopers.
 
-- [Download the MP4 video](VMS300_Adults_Only.mp4)
-- [Download the MP3 voiceover](VMS300_Adults_Only_Voiceover.mp3)
-- [Read the narration script](narration-script.md)
+- [Download the comedy MP4](VMS300_Adults_Only.mp4)
+- [Download the comedy voiceover MP3](VMS300_Adults_Only_Voiceover.mp3)
+- [Read the full routine](narration-script.md)
 - [Download English subtitles](narration.srt)
 
-Open a file above and click **Download raw file** on GitHub, then open the saved file on your computer. Sign in to GitHub if the repository requires it.
+The video is approximately **3 minutes 52 seconds**, at **1920 × 1080**, with H.264 video, AAC sound, and selectable English subtitles. Sentence subtitle timings are approximate.
 
-The video runs approximately **4 minutes 54 seconds**, at **1920 × 1080**, using H.264 video and AAC audio in an MP4 container. English narration subtitles are available as a selectable track and a separate SRT. Sentence subtitle timings are approximate.
+The new original synthetic American comic narrator uses stock Puck and Eric voice bases, a quicker setup, brief pauses and slower punchlines. It does not imitate or reproduce the voice of a real actor or comedian.
 
-This is a **production draft**. It uses manufacturer illustrations, an annotated photo-based control-panel graphic and clearly labelled gaps for site close-ups. Cup/gripper alignment, camera-to-sponge contact and both tube-holding positions still need suitable footage. It is not a recording or verification of a calibration performed on a station.
+The story includes **Pretend We Fixed It**, **Bank Manager Mode**, **Divorce Mode**, a robot demanding a holiday, and Brenda the cow taking over management. These are invented jokes. The stage graphics show an original cartoon robot, with no actual equipment panels, manufacturer interface or operating sequence. Every scene is labelled as fictional parody. This version is entertainment rather than a machine operating guide.
 
-The operational steps follow the supplied DeLaval VMS V300 Instruction Book, §6.2 pp248–256, with Manual (Closed Stall) selection from §4.5.3 pp86–89 and the empty-stall prerequisite from §5.5.1 p240. Deliberate mistakes concern the narrator's commentary only; the button instructions remain correct. The opening safety joke is immediately retracted, and the actual safety guidance stays in the video.
+The original farmer instructional video remains at [`exports/VMS300_Farmer_Guide.mp4`](../VMS300_Farmer_Guide.mp4). The earlier adults-only instructional cut remains available in [its prior Git commit](https://github.com/sjgffwjyr7-svg/worklog/tree/f05f3d0ec60f3d6f09037778f2606613ad06bb55/exports/adults-only).
 
-This is a user-requested adult-humour version, not an official DeLaval production.
+## Download access
+
+Sign into a GitHub account that has access to `sjgffwjyr7-svg/worklog`. Open a file above, select **Download raw file**, then open the saved file on your computer. An account without repository access may receive a **404**, even though the file exists. A new upload does not change repository access.
+
+This is an unofficial user-requested comedy production.
