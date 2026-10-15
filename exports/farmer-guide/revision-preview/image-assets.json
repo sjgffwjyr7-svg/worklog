@@ -1,0 +1,36 @@
+{
+  "source": "/workspace/vms300-video/figures/control-panel-entry-annotated.png",
+  "source_bytes": 2267043,
+  "source_sha256": "d9a94689d5de74d20e939845ccc317e6d79ff1273d5c691a19358ed0422330ca",
+  "assets": [
+    {
+      "file": "VMS300_Controller_Panel_Annotated.jpg",
+      "width": 1600,
+      "height": 900,
+      "bytes": 339210,
+      "sha256": "d8aa8f39c3cec8368e4873ffad23cd7df2d4cd2b99bb5d841ece17b339acdf8b",
+      "source_type": "existing generated, annotated photo-based training graphic; not the unedited original photograph",
+      "processing": "JPEG conversion and proportional downsize; close-up also crops away top/bottom title bars; button symbols/highlights are not redrawn",
+      "crop_xywh": null
+    },
+    {
+      "file": "VMS300_Controller_Panel_Annotated_Closeup.jpg",
+      "width": 1600,
+      "height": 698,
+      "bytes": 242902,
+      "sha256": "3e8792fb0c79ec9564f14f31a97cb1c937c15d3b817888c1c990c107b0d3bc2e",
+      "source_type": "existing generated, annotated photo-based training graphic; not the unedited original photograph",
+      "processing": "JPEG conversion and proportional downsize; close-up also crops away top/bottom title bars; button symbols/highlights are not redrawn",
+      "crop_xywh": [
+        0,
+        84,
+        1672,
+        730
+      ]
+    }
+  ],
+  "original_preserved": true,
+  "new_audio_or_video_generated": false,
+  "published": false,
+  "genuine_original_photo_still_required_for_clean_source": true
+}
