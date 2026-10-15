@@ -1,34 +1,130 @@
 {
-  "kokoro_onnx": {
-    "installed_version": "0.6.1",
-    "license": "MIT",
-    "verified_from": "/workspace/vms300-video/farmer-stock-voice/KOKORO-ONNX-LICENSE.txt"
-  },
-  "kokoro_model": {
-    "license": "Apache-2.0",
-    "verified_from": "https://raw.githubusercontent.com/thewh1teagle/kokoro-onnx/main/README.md",
-    "saved_source_readme": "kokoro-onnx-source-readme.md",
-    "readme_sha256": "26c1abe64de52f1c22fe17e95b45c5aa3767604ab704ee851994d22c7c4e6582"
-  },
-  "model_artifacts": [
-    {
-      "name": "kokoro-v1.0.onnx",
-      "source": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.onnx",
-      "bytes": 325505369,
-      "sha256": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a"
-    },
-    {
-      "name": "voices-v1.0.bin",
-      "source": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin",
-      "bytes": 28214398,
-      "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"
-    }
-  ],
-  "stock_recipe": {
+  "edition": "Updated farmer guide: faster narration and fixed full controller view",
+  "user_production_request": "make the updated video",
+  "duration": 225.02341666666666,
+  "source_words": 617,
+  "scenes": 15,
+  "speech_chunks": 89,
+  "visual_cues": 43,
+  "stock_voice_recipe": {
     "am_puck": 0.75,
     "am_fenrir": 0.25
   },
-  "speaker_reference_used": false,
-  "voice_similarity_auditioned": false,
-  "temporary_user_authorization": "ok use another funny voice for now"
+  "speed_multiplier": 1.2,
+  "pitch_preserving": true,
+  "speech_regenerated": false,
+  "reference_voice_cloned": false,
+  "perceptual_match_claimed": false,
+  "audio_auditioned": false,
+  "spoken_words_ASR_verified": false,
+  "script_sha256": "cbe26a3d5887b1e7412297d1263d2dcdf58924e32a0e7f8d313298238c0747e8",
+  "whole_controller_visible": true,
+  "controller_dimensions": [
+    1792,
+    784
+  ],
+  "controller_origin": [
+    64,
+    165
+  ],
+  "controller_cues": 24,
+  "only_discussed_targets_highlighted": true,
+  "hold_outline_steady": true,
+  "source_kind": "retouched photo-derived working reference",
+  "original_photo_recovered": false,
+  "source_restoration_checks": {
+    "candidate_dimensions_match_source": true,
+    "outside_mask_pixels_identical": true,
+    "outside_mask_changed_pixels": 0,
+    "actual_changed_pixels": 7493,
+    "changed_bounds_xyxy_exclusive": [
+      526,
+      348,
+      647,
+      568
+    ],
+    "cyan_core_pixels_remaining": 0,
+    "native_file_lossless_roundtrip": true,
+    "protected_native_regions": {
+      "entrance_button": {
+        "category": "button_faces",
+        "identical": true
+      },
+      "teat_clean_button": {
+        "category": "button_faces",
+        "identical": true
+      },
+      "cancel_cross": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "entrance_gate_symbol": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "teat_clean_symbol": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "confirm_check": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "calibration_bracket_and_gear": {
+        "category": "printed_symbols",
+        "identical": true
+      },
+      "mode_column_lamps_switch_stop": {
+        "category": "additional_controls",
+        "identical": true
+      },
+      "complete_right_movement_group": {
+        "category": "additional_controls",
+        "identical": true
+      },
+      "exit_gate_up_button_and_icon": {
+        "category": "additional_controls",
+        "identical": true
+      },
+      "feed_portion_down_button_and_icon": {
+        "category": "additional_controls",
+        "identical": true
+      }
+    }
+  },
+  "source_image_sha256": "ba72b781e7574c53714dd58ac7b632e6b511be98d7feb1854867625d537974e4",
+  "engine_and_model_provenance": {
+    "kokoro_onnx": {
+      "installed_version": "0.6.1",
+      "license": "MIT",
+      "verified_from": "/workspace/vms300-video/farmer-stock-voice/KOKORO-ONNX-LICENSE.txt"
+    },
+    "kokoro_model": {
+      "license": "Apache-2.0",
+      "verified_from": "https://raw.githubusercontent.com/thewh1teagle/kokoro-onnx/main/README.md",
+      "saved_source_readme": "kokoro-onnx-source-readme.md",
+      "readme_sha256": "26c1abe64de52f1c22fe17e95b45c5aa3767604ab704ee851994d22c7c4e6582"
+    },
+    "model_artifacts": [
+      {
+        "name": "kokoro-v1.0.onnx",
+        "source": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.onnx",
+        "bytes": 325505369,
+        "sha256": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a"
+      },
+      {
+        "name": "voices-v1.0.bin",
+        "source": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin",
+        "bytes": 28214398,
+        "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"
+      }
+    ],
+    "stock_recipe": {
+      "am_puck": 0.75,
+      "am_fenrir": 0.25
+    },
+    "speaker_reference_used": false,
+    "voice_similarity_auditioned": false,
+    "temporary_user_authorization": "ok use another funny voice for now"
+  }
 }

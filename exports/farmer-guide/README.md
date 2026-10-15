@@ -1,19 +1,21 @@
-# VMS300 farmer guide — temporary funny narrator
+# VMS300 farmer guide — updated full-panel edition
 
-The revised farmer guide uses a lively synthetic American narrator, a new greeting and light farm humour between the operating instructions. It covers recalibration of cup pickup, camera cleaning and both tube-holding positions, followed by functional checks. The farmer edition retains the manual-based procedure and safety instructions.
+The updated guide uses the same temporary comic American narrator **20% faster**, with light farm humour and the reviewed greeting. The full controller stays visible at a fixed size during every physical-control explanation. Only the discussed control or control group receives the yellow highlight.
 
-- [Open or download the complete MP4](../VMS300_Farmer_Guide.mp4?raw=1)
-- [Listen to the temporary voice preview](Temporary_Funny_Voice_Preview.mp3?raw=1) — a voice excerpt, not the complete procedure.
+- [Watch or download the complete MP4](../VMS300_Farmer_Guide.mp4?raw=1)
+- [Listen to the faster voice preview](Voice_Preview_20_Percent_Faster.mp3?raw=1)
 - [Download the full narration](VMS300_Farmer_Guide_Voiceover.mp3?raw=1)
-- [Read the revised narration](narration-script.md)
+- [Read the narration](narration-script.md)
 - [Download English captions](narration.srt?raw=1)
 
-Sign into GitHub with access to this repository. Open the MP4 and choose **Download raw file** to save it to your computer. The MP4 uses H.264 video, AAC sound and selectable English captions. Anonymous access to this repository may return 404.
+Sign into GitHub with access to this repository, open the MP4 and choose **Download raw file** to save it. The file uses H.2641080p video, AAC audio, fast-start playback and selectable English captions. Anonymous repository access may return404.
 
-Controller close-ups identify individual functions with yellow highlights. **TAP ONCE**, **PRESS AND HOLD** and **PRESS TOGETHER** are distinct. The 43 visual cues follow measured generated speech-chunk starts; no hold duration has been invented. The pictured controller is the left-oriented station; right-oriented stations are mirrored.
+The guide covers recalibrating cup pickup, camera cleaning and both tube-holding positions, then functional checks. The617 reviewed words, all15 scenes and the manufacturer-based technical/safety instructions are retained. Its43 visual cues use actual measured speech-chunk boundaries. **TAP ONCE**, **PRESS AND HOLD** and **PRESS TOGETHER** remain distinct; HOLD has a steady outline and no invented numerical duration. The pictured controller is for the left-oriented station; right-oriented stations are mirrored.
 
-The controller graphic is an existing generated, annotated derivative based on the supplied photo, clearly labelled **PHOTO-DERIVED CONTROL GRAPHIC**. It is not an untouched photograph or a live machine state. No lamp state has been repainted. Other equipment drawings and screen captures remain labelled as manual references where suitable actual photographs are unavailable. Correct gripper alignment, camera/sponge contact and both tube-holding positions still require site footage; reference illustrations do not prove correct positioning on a station.
+The controller remains at1792×784 in the same location on every panel shot, preserving the mode column and both four-button groups. The assistant-added cyan outlines have been removed from the working reference. The source is a **retouched photo-derived reference**, not a recovered untouched original photograph. Native validation confirmed only7493 pixels inside the former cyan-stroke mask changed; every outside pixel and the protected control faces, printed symbols, lamps, switch and emergency stop remained identical to the previous working reference. Outlines identify targets and do not simulate presses, lamp illumination or successful calibration.
 
-The temporary stock voice blends 75% Puck and 25% Fenrir using Kokoro. It does not clone the speaker in “Reds HillBilly Shot.mp4”. The user authorised another funny voice for now; their own voice remains a future option. Engine/model sources and licence provenance are recorded in `temporary-voice-notes.json`. The old `Southern_Voice_Preview.mp3` filename is retained as an alias for this new preview.
+Other screen and equipment references remain labelled as manual sources. Actual gripper/cup-handle alignment, sponge contact and both horn/tube positions still use references where operational site footage is unavailable; they do not demonstrate correct positioning on a real station.
 
-Source: uploaded DeLaval VMS V300 Instruction Book, §6.2 pp248–256; Manual (Closed Stall) §4.5.3 pp86–89; empty-stall test prerequisite §5.5.1 p240; handedness pp119–120. Follow the matching labels on the actual station. The adult comedy and ten voice samples remain separate exports.
+The temporary narrator uses75%Puck/25%Fenrir. Pitch-preserving1.20×processing implements the requested pace change without generating another voice. It is not a clone of the speaker in “Reds HillBilly Shot.mp4”. Source/licence, speed and image provenance are in `temporary-voice-notes.json`. Existing voice-preview aliases point to the same faster preview. The adult comedy, ten voice samples and earlier review folders remain separate.
+
+Sources: uploaded DeLaval VMS V300 Instruction Book §6.2 pp248–256; Manual (Closed Stall) §4.5.3 pp86–89; empty-stall test prerequisite §5.5.1 p240; handedness pp119–120. Use the matching labels on the actual station.
