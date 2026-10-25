@@ -1,12 +1,13 @@
 # Builds Worklog on GitHub's macOS machines, so no Mac is needed.
-# 1. "test" compiles the app and runs the XCTest suite in an iPhone Simulator.
-# 2. "ipa" builds an unsigned Worklog-unsigned.ipa for the iPhone. Download it from the
-#    run's Artifacts and install it from Windows with Sideloadly using your Apple ID.
+# One Mac job (cheaper than two): compiles and runs the XCTest suite in an iPhone Simulator,
+# takes screenshots with sample data, then builds Worklog-unsigned.ipa. Download it from the
+# run's Artifacts and install it from Windows with Sideloadly using your Apple ID.
+# Runs only for the main branch (or on demand) to save Mac build minutes.
 name: iOS build
 
 on:
   push:
-  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 defaults:
@@ -16,7 +17,7 @@ defaults:
 jobs:
   test:
     runs-on: macos-15
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - name: Show Xcode version
@@ -85,16 +86,9 @@ jobs:
           path: |
             Native/Worklog-iOS/build/Tests.xcresult
             Native/Worklog-iOS/build/test.log
-
-  ipa:
-    runs-on: macos-15
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v4
       - name: Build unsigned iPhone app
         run: |
           set -o pipefail
-          mkdir -p build
           xcodebuild -project Worklog.xcodeproj -scheme Worklog -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/Device \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tee build/device.log
