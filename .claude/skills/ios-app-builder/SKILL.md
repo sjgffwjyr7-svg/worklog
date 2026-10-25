@@ -44,4 +44,7 @@ On the Windows PC: Apple iTunes + iCloud from apple.com (not the Microsoft Store
 - In Form/List rows, several buttons in one row all fire on a tap — give each button its own row (`.buttonRow()`).
 - `Label` inside List rows takes the row's icon layout and stretches; use `HStack { Image; Text }` for badges and add `.fixedSize()` so chips don't wrap.
 - Create `build/` before `tee build/…` in CI.
+- "Unable to type-check this expression in reasonable time": split long `+` string chains or big view expressions into a small function with explicit types.
+- GitHub Actions on a private repo uses paid minutes (Mac minutes count 10×); when they run out jobs fail in ~2 s with a billing annotation. Public repos build free. Keep CI to one Mac job, `main` only, and ignore doc-only changes.
+- Siri App Shortcut phrases must contain the app name; a personal Shortcut in the Shortcuts app gives a shorter phrase.
 - `CLLocationManagerDelegate` methods on a `@MainActor` class compile with warnings in Swift 5 mode; that's acceptable.
