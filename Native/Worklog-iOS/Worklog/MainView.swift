@@ -164,9 +164,10 @@ struct MainView: View {
     var body: some View {
         TabView(selection: $tab) {
             DashboardView().tabItem { Label("Trips", systemImage: "car.side.fill") }.tag(0)
-            InvoicesView().tabItem { Label("Receipts", systemImage: "doc.text.viewfinder") }.tag(1)
-            ScheduleView().tabItem { Label("Schedule", systemImage: "calendar.badge.clock") }.tag(2)
-            StorageView().tabItem { Label("Settings", systemImage: "gearshape.fill") }.tag(3)
+            HoursView().tabItem { Label("Hours", systemImage: "clock.fill") }.tag(1)
+            InvoicesView().tabItem { Label("Receipts", systemImage: "doc.text.viewfinder") }.tag(2)
+            ScheduleView().tabItem { Label("Schedule", systemImage: "calendar.badge.clock") }.tag(3)
+            StorageView().tabItem { Label("Settings", systemImage: "gearshape.fill") }.tag(4)
         }
         .toolbarBackground(Theme.card, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
@@ -1191,5 +1192,364 @@ struct TripDayView: View {
             Button("Cancel", role: .cancel) {}
         } message: { Text($0.deleteSummary) }
         .onAppear { if DemoMode.flag("-WorklogShowDelete"), pendingDelete == nil { pendingDelete = dayTrips.first } }
+    }
+}
+
+// MARK: - Hours worked
+
+/// The place picked last time, so clocking on is one tap (also used by Siri).
+enum LastShiftPlace {
+    static var value: ShiftPlace {
+        get { ShiftPlace(rawValue: UserDefaults.standard.string(forKey: "lastShiftPlace") ?? "") ?? .workplace }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: "lastShiftPlace") }
+    }
+}
+
+/// Seconds worked by shifts starting inside a span, counting a shift still in progress.
+@MainActor func workedSeconds(_ store: WorkStore, in span: DateInterval, place: ShiftPlace? = nil, now: Date = Date()) -> TimeInterval {
+    (store.shifts + (store.data.activeShift.map { [$0] } ?? []))
+        .filter { $0.start >= span.start && $0.start < span.end && (place == nil || $0.place == place) }
+        .reduce(0) { $0 + $1.workedSeconds(at: now) }
+}
+
+struct HoursView: View {
+    @EnvironmentObject var store: WorkStore
+    @State private var place = LastShiftPlace.value
+    @State private var notes = ""
+    @State private var openLog = false
+    @State private var adding = false
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    shiftCard
+                    TimelineView(.periodic(from: .now, by: 60)) { context in
+                        let cal = TripCalendar.calendar(tz)
+                        let today = cal.dateInterval(of: .day, for: context.date) ?? DateInterval(start: context.date, duration: 86400)
+                        let week = DateInterval(start: TripCalendar.weekStart(of: context.date, timeZoneID: tz), duration: 7 * 86400)
+                        let fy = FinancialYear.interval(FinancialYear.startYear(for: context.date, timeZone: tz), timeZone: tz)
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 10) {
+                                StatChip(icon: "sun.max.fill", text: "Today " + hoursText(workedSeconds(store, in: today, now: context.date)), color: Theme.mint)
+                                StatChip(icon: "calendar", text: "This week " + hoursText(workedSeconds(store, in: week, now: context.date)), color: Theme.accent)
+                            }
+                            HStack(spacing: 10) {
+                                StatChip(icon: "briefcase.fill", text: "This year " + hoursText(workedSeconds(store, in: fy, now: context.date)), color: Theme.mint)
+                                StatChip(icon: "house.fill", text: "From home " + hoursText(workedSeconds(store, in: fy, place: .home, now: context.date)), color: Theme.accent)
+                            }
+                        }
+                    }
+                    Button { openLog = true } label: { Label("Timesheet", systemImage: "list.bullet.rectangle.portrait.fill") }
+                        .buttonStyle(PrimaryButtonStyle())
+                    Button { adding = true } label: { Label("Add hours manually", systemImage: "plus") }
+                        .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent))
+                    Text("Working-from-home hours are totalled separately for the ATO's fixed-rate method, which needs a record of the actual hours you worked at home.")
+                        .font(.footnote).foregroundStyle(Theme.textTertiary)
+                }.padding(.horizontal, 18).padding(.vertical, 12)
+            }
+            .background(Theme.background)
+            .navigationTitle("Hours")
+            .toolbarBackground(Theme.background, for: .navigationBar)
+            .navigationDestination(isPresented: $openLog) { HoursLogView() }
+            .sheet(isPresented: $adding) { ShiftEditorView(existing: nil) }
+            .onAppear { if DemoMode.flag("-WorklogOpenHoursLog") { openLog = true } }
+        }
+    }
+
+    var shiftCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if let shift = store.data.activeShift {
+                let onBreak = shift.breakStart != nil
+                HStack(spacing: 8) {
+                    Circle().fill(onBreak ? Theme.warning : Theme.mint).frame(width: 9, height: 9)
+                    Text(onBreak ? "ON BREAK" : "ON SHIFT").font(.caption.weight(.bold)).tracking(1).foregroundStyle(onBreak ? Theme.warning : Theme.mint)
+                    Spacer()
+                    Text(shift.place.rawValue).font(.caption.weight(.semibold)).foregroundStyle(Theme.textSecondary)
+                }
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(hoursText(shift.workedSeconds(at: context.date))).font(.system(size: 46, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary)
+                        Text("Clocked on " + shift.start.formatted(date: .omitted, time: .shortened) + " · breaks " + hoursText(shift.breakSeconds(at: context.date)))
+                            .font(.subheadline).foregroundStyle(Theme.textSecondary)
+                        if context.date.timeIntervalSince(shift.start) > 14 * 3600 {
+                            Label("Still clocked on after 14 hours. Clock off, then correct the finish time in the timesheet.", systemImage: "exclamationmark.triangle.fill")
+                                .font(.footnote).foregroundStyle(Theme.warning)
+                        }
+                    }
+                }
+                if !shift.notes.isEmpty { Text(shift.notes).font(.subheadline).foregroundStyle(Theme.textSecondary) }
+                Button { if onBreak { store.endBreak() } else { store.startBreak() } } label: {
+                    Label(onBreak ? "End break" : "Start break", systemImage: onBreak ? "play.fill" : "cup.and.saucer.fill")
+                }.buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.field), foreground: Theme.accent))
+                Button { store.clockOff() } label: { Label("Clock off", systemImage: "stop.fill") }
+                    .buttonStyle(PrimaryButtonStyle(fill: AnyShapeStyle(Theme.danger), foreground: .white))
+            } else {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Ready to start work?").font(.title3.weight(.bold)).foregroundStyle(Theme.textPrimary)
+                        Text("Clock on to record your hours.").font(.subheadline).foregroundStyle(Theme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "clock.fill").font(.system(size: 30, weight: .semibold)).foregroundStyle(Theme.accent)
+                }
+                DropdownField(label: "Where are you working?", selection: $place, options: ShiftPlace.allCases, title: { $0.rawValue })
+                ThemedTextField(label: "Notes", prompt: "Optional — job or customer", text: $notes)
+                Button {
+                    if store.clockOn(place: place, notes: notes) { LastShiftPlace.value = place; notes = "" }
+                } label: { Label("Clock on", systemImage: "play.fill") }
+                    .buttonStyle(PrimaryButtonStyle())
+            }
+        }
+        .cardStyle(padding: 20)
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(store.data.activeShift == nil ? Theme.accent.opacity(0.35) : Theme.mint.opacity(0.5), lineWidth: 1))
+    }
+}
+
+struct ShiftRow: View {
+    let shift: WorkShift
+    let tz: String
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: shift.place == .home ? "house.fill" : shift.place == .road ? "car.side.fill" : "briefcase.fill")
+                .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.accent)
+                .frame(width: 36, height: 36).background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(shift.start.formatted(.dateTime.hour().minute(), in: tz) + " – " + (shift.end?.formatted(.dateTime.hour().minute(), in: tz) ?? "now"))
+                    .font(.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                Text(shift.place.rawValue + (shift.breakSeconds() > 0 ? " · breaks " + hoursText(shift.breakSeconds()) : "") + (shift.manual ? " · added manually" : ""))
+                    .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                if !shift.notes.isEmpty { Text(shift.notes).font(.caption2).foregroundStyle(Theme.textTertiary).lineLimit(1) }
+            }.layoutPriority(1)
+            Spacer(minLength: 8)
+            Text(hoursText(shift.workedSeconds())).font(.headline.monospacedDigit()).foregroundStyle(Theme.mint).fixedSize()
+        }.contentShape(Rectangle())
+    }
+}
+
+/// Timesheet: financial years → months → Monday–Sunday weeks → days → shifts.
+struct HoursLogView: View {
+    @EnvironmentObject var store: WorkStore
+    @State private var openYear: Int?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let years = Array(Set(store.shifts.map { FinancialYear.startYear(for: $0.start, timeZone: tz) })).sorted(by: >)
+        let current = FinancialYear.startYear(for: Date(), timeZone: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                if years.isEmpty { Text("No hours recorded yet. Clock on to start.").foregroundStyle(Theme.textSecondary) }
+                ForEach(years, id: \.self) { year in
+                    let span = FinancialYear.interval(year, timeZone: tz)
+                    let count = store.shifts.filter { span.contains($0.start) }.count
+                    Button { openYear = year } label: {
+                        LogFolderRow(title: "FY \(String(year))–\(String(year + 1).suffix(2))",
+                                     subtitle: "From home " + hoursText(workedSeconds(store, in: span, place: .home)) + " · \(count) shift\(count == 1 ? "" : "s")",
+                                     count: count, highlight: year == current ? "This year" : nil, amount: hoursText(workedSeconds(store, in: span)), emptyText: "No hours")
+                    }.buttonStyle(.plain)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle("Timesheet")
+        .navigationDestination(item: $openYear) { HoursYearView(year: $0) }
+        .onAppear { if DemoMode.flag("-WorklogOpenHoursYear"), openYear == nil { openYear = years.first } }
+    }
+}
+
+struct HoursYearView: View {
+    @EnvironmentObject var store: WorkStore
+    let year: Int
+    @State private var openMonth: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let span = FinancialYear.interval(year, timeZone: tz)
+        let months = TripCalendar.monthStarts(store.shifts.filter { span.contains($0.start) }.map(\.start), timeZoneID: tz)
+        let thisMonth = TripCalendar.monthStart(of: Date(), timeZoneID: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                HoursHeader(seconds: workedSeconds(store, in: span), caption: "worked this year")
+                ForEach(months, id: \.self) { month in
+                    let m = TripCalendar.monthInterval(of: month, timeZoneID: tz)
+                    let count = store.shifts.filter { m.contains($0.start) }.count
+                    Button { openMonth = month } label: {
+                        LogFolderRow(title: month.formatted(.dateTime.month(.wide).year(), in: tz), subtitle: "\(count) shift\(count == 1 ? "" : "s")",
+                                     count: count, highlight: month == thisMonth ? "This month" : nil, amount: hoursText(workedSeconds(store, in: m)), emptyText: "No hours")
+                    }.buttonStyle(.plain)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle("FY \(String(year))–\(String(year + 1).suffix(2))").navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $openMonth) { HoursMonthView(month: $0) }
+        .onAppear { if DemoMode.flag("-WorklogOpenHoursMonth"), openMonth == nil { openMonth = months.first } }
+    }
+}
+
+struct HoursMonthView: View {
+    @EnvironmentObject var store: WorkStore
+    let month: Date
+    @State private var openWeek: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let span = TripCalendar.monthInterval(of: month, timeZoneID: tz)
+        let monthShifts = store.shifts.filter { span.contains($0.start) }
+        let weeks = TripCalendar.weekStarts(monthShifts.map(\.start), timeZoneID: tz)
+        let thisWeek = TripCalendar.weekStart(of: Date(), timeZoneID: tz)
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                HoursHeader(seconds: workedSeconds(store, in: span), caption: "worked this month")
+                ForEach(weeks, id: \.self) { week in
+                    let last = TripCalendar.days(inWeek: week, timeZoneID: tz).last ?? week
+                    let weekShifts = monthShifts.filter { TripCalendar.weekStart(of: $0.start, timeZoneID: tz) == week }
+                    let partWeek = !span.contains(week) || !span.contains(last)
+                    Button { openWeek = week } label: {
+                        LogFolderRow(title: week.formatted(.dateTime.day().month(), in: tz) + " – " + last.formatted(.dateTime.day().month(), in: tz),
+                                     subtitle: (partWeek ? "Part week · " : "Mon to Sun · ") + "\(weekShifts.count) shift\(weekShifts.count == 1 ? "" : "s")",
+                                     count: weekShifts.count, highlight: week == thisWeek ? "This week" : nil,
+                                     amount: hoursText(weekShifts.reduce(0) { $0 + $1.workedSeconds() }), emptyText: "No hours")
+                    }.buttonStyle(.plain)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle(month.formatted(.dateTime.month(.wide).year(), in: tz)).navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $openWeek) { HoursWeekView(weekStart: $0, within: span) }
+        .onAppear { if DemoMode.flag("-WorklogOpenHoursWeek"), openWeek == nil { openWeek = weeks.first } }
+    }
+}
+
+struct HoursWeekView: View {
+    @EnvironmentObject var store: WorkStore
+    let weekStart: Date
+    let within: DateInterval
+    @State private var openDay: Date?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let cal = TripCalendar.calendar(tz)
+        let weekShifts = store.shifts.filter { within.contains($0.start) && TripCalendar.weekStart(of: $0.start, timeZoneID: tz) == weekStart }
+        let allDays = TripCalendar.days(inWeek: weekStart, timeZoneID: tz)
+        let days = allDays.filter { within.contains($0) }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                HoursHeader(seconds: weekShifts.reduce(0) { $0 + $1.workedSeconds() }, caption: "worked this week")
+                ForEach(days, id: \.self) { day in
+                    let dayShifts = weekShifts.filter { cal.isDate($0.start, inSameDayAs: day) }
+                    Button { openDay = day } label: {
+                        LogFolderRow(title: day.formatted(.dateTime.weekday(.wide), in: tz),
+                                     subtitle: day.formatted(.dateTime.day().month(.wide).year(), in: tz) + (dayShifts.isEmpty ? "" : " · \(dayShifts.count) shift\(dayShifts.count == 1 ? "" : "s")"),
+                                     count: dayShifts.count, highlight: cal.isDateInToday(day) ? "Today" : nil,
+                                     amount: hoursText(dayShifts.reduce(0) { $0 + $1.workedSeconds() }), emptyText: "No hours")
+                    }.buttonStyle(.plain).disabled(dayShifts.isEmpty)
+                }
+                if days.count < 7 { Text("The rest of this week is in the next or previous month.").font(.footnote).foregroundStyle(Theme.textTertiary) }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle("Mon \(weekStart.formatted(.dateTime.day().month(), in: tz)) – Sun \((allDays.last ?? weekStart).formatted(.dateTime.day().month(), in: tz))")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $openDay) { HoursDayView(day: $0) }
+        .onAppear { if DemoMode.flag("-WorklogOpenHoursDay"), openDay == nil { openDay = days.last { d in weekShifts.contains { cal.isDate($0.start, inSameDayAs: d) } } } }
+    }
+}
+
+struct HoursDayView: View {
+    @EnvironmentObject var store: WorkStore
+    let day: Date
+    @State private var editing: WorkShift?
+    @State private var pendingDelete: WorkShift?
+    var tz: String { store.data.schedule.timeZoneID }
+    var body: some View {
+        let cal = TripCalendar.calendar(tz)
+        let dayShifts = store.shifts.filter { cal.isDate($0.start, inSameDayAs: day) }.sorted { $0.start < $1.start }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                HoursHeader(seconds: dayShifts.reduce(0) { $0 + $1.workedSeconds() }, caption: "worked")
+                if dayShifts.isEmpty { Text("No hours on this day.").foregroundStyle(Theme.textSecondary) }
+                ForEach(dayShifts) { shift in
+                    HStack(spacing: 10) {
+                        Button { editing = shift } label: { ShiftRow(shift: shift, tz: tz) }.buttonStyle(.plain)
+                        DeleteIconButton { pendingDelete = shift }
+                    }.cardStyle(padding: 14)
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 12)
+        }
+        .background(Theme.background)
+        .navigationTitle(day.formatted(.dateTime.weekday(.wide).day().month(), in: tz)).navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $editing) { ShiftEditorView(existing: $0) }
+        .alert("Delete these hours?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), presenting: pendingDelete) { shift in
+            Button("Delete hours", role: .destructive) { do { try store.deleteShift(shift.id) } catch { store.error = error.localizedDescription } }
+            Button("Cancel", role: .cancel) {}
+        } message: { shift in
+            Text(shift.start.formatted(date: .abbreviated, time: .shortened) + " – " + (shift.end?.formatted(date: .omitted, time: .shortened) ?? "") + "\n" + hoursText(shift.workedSeconds()) + " · " + shift.place.rawValue + "\n\nThis can't be undone.")
+        }
+    }
+}
+
+private struct HoursHeader: View {
+    let seconds: TimeInterval
+    let caption: String
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(hoursText(seconds)).font(.system(size: 40, weight: .bold, design: .rounded)).foregroundStyle(Theme.textPrimary).minimumScaleFactor(0.5).lineLimit(1)
+            Text(caption).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.mint)
+        }.padding(.bottom, 6)
+    }
+}
+
+/// Add hours you forgot to clock, or correct a shift.
+struct ShiftEditorView: View {
+    let existing: WorkShift?
+    @EnvironmentObject var store: WorkStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var start = Calendar.current.date(bySettingHour: 7, minute: 0, second: 0, of: Date()) ?? Date()
+    @State private var finish = Calendar.current.date(bySettingHour: 15, minute: 30, second: 0, of: Date()) ?? Date()
+    @State private var breakMinutes = "30"
+    @State private var place = LastShiftPlace.value
+    @State private var notes = ""
+    @State private var error: String?
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    DatePicker("Start", selection: $start, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("Finish", selection: $finish, in: start..., displayedComponents: [.date, .hourAndMinute])
+                    ThemedTextField(label: "Breaks (minutes)", prompt: "e.g. 30", text: $breakMinutes, keyboard: .numberPad)
+                    DropdownField(label: "Where you worked", selection: $place, options: ShiftPlace.allCases, title: { $0.rawValue })
+                    ThemedTextField(label: "Notes", prompt: "Optional — job or customer", text: $notes)
+                    let minutes = Double(breakMinutes) ?? 0
+                    Text("Hours worked: " + hoursText(max(0, finish.timeIntervalSince(start) - minutes * 60)))
+                        .font(.headline).foregroundStyle(Theme.mint)
+                    if let error { Label(error, systemImage: "exclamationmark.circle.fill").font(.subheadline).foregroundStyle(Theme.warning) }
+                    Button { save() } label: { Label("Save hours", systemImage: "checkmark") }.buttonStyle(PrimaryButtonStyle())
+                }.padding(20)
+            }
+            .background(Theme.background)
+            .navigationTitle(existing == nil ? "Add hours" : "Edit hours").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .onAppear {
+                guard let s = existing else { return }
+                start = s.start; finish = s.end ?? Date(); place = s.place; notes = s.notes
+                breakMinutes = String(Int((s.breakSeconds() / 60).rounded()))
+            }
+        }
+        .presentationDetents([.large])
+        .presentationBackground(Theme.background)
+    }
+    func save() {
+        guard let minutes = Int(breakMinutes.trimmingCharacters(in: .whitespaces).isEmpty ? "0" : breakMinutes.trimmingCharacters(in: .whitespaces)), minutes >= 0 else { error = "Enter break minutes as a whole number."; return }
+        guard finish > start else { error = "The finish must be after the start."; return }
+        guard Double(minutes * 60) < finish.timeIntervalSince(start) else { error = "Breaks can't be as long as the shift."; return }
+        var shift = existing ?? WorkShift(start: start, timeZoneID: store.data.schedule.timeZoneID, manual: true)
+        let keepBreaks = existing.map { Int(($0.breakSeconds() / 60).rounded()) == minutes && $0.start == start && $0.end == finish } ?? false
+        shift.start = start; shift.end = finish; shift.place = place; shift.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !keepBreaks {
+            // A single break placed mid-shift; only its length matters for hours worked.
+            let middle = start.addingTimeInterval((finish.timeIntervalSince(start) - Double(minutes * 60)) / 2)
+            shift.breaks = minutes > 0 ? [DateInterval(start: middle, duration: Double(minutes * 60))] : []
+        }
+        if existing != nil && !keepBreaks { shift.manual = true }
+        guard store.saveShift(shift) else { error = "The hours were not saved. Check device storage."; return }
+        LastShiftPlace.value = place
+        dismiss()
     }
 }

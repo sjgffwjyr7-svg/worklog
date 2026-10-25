@@ -60,13 +60,17 @@ jobs:
           NAME=1e-trip-week shoot -WorklogTab 0 -WorklogOpenTripLog -WorklogOpenYear -WorklogOpenMonth -WorklogOpenWeek
           NAME=1f-trip-day shoot -WorklogTab 0 -WorklogOpenTripLog -WorklogOpenYear -WorklogOpenMonth -WorklogOpenWeek -WorklogOpenDay
           NAME=2b-delete-trip shoot -WorklogTab 0 -WorklogOpenTripLog -WorklogOpenYear -WorklogOpenMonth -WorklogOpenWeek -WorklogOpenDay -WorklogShowDelete
-          NAME=3-receipts shoot -WorklogTab 1
-          NAME=3b-receipt-month shoot -WorklogTab 1 -WorklogOpenReceiptMonth
-          NAME=3c-receipt-week shoot -WorklogTab 1 -WorklogOpenReceiptMonth -WorklogOpenReceiptWeek
-          NAME=3d-receipt-day shoot -WorklogTab 1 -WorklogOpenReceiptMonth -WorklogOpenReceiptWeek -WorklogOpenReceiptDay
-          NAME=4-add-receipt shoot -WorklogTab 1 -WorklogShowAddReceipt
-          NAME=5-schedule shoot -WorklogTab 2
-          NAME=6-settings shoot -WorklogTab 3
+          NAME=3-receipts shoot -WorklogTab 2
+          NAME=3b-receipt-month shoot -WorklogTab 2 -WorklogOpenReceiptMonth
+          NAME=3c-receipt-week shoot -WorklogTab 2 -WorklogOpenReceiptMonth -WorklogOpenReceiptWeek
+          NAME=3d-receipt-day shoot -WorklogTab 2 -WorklogOpenReceiptMonth -WorklogOpenReceiptWeek -WorklogOpenReceiptDay
+          NAME=4-add-receipt shoot -WorklogTab 2 -WorklogShowAddReceipt
+          NAME=7-hours shoot -WorklogTab 1
+          NAME=7b-hours-on-shift shoot -WorklogTab 1 -WorklogDemoOnShift
+          NAME=7c-hours-week shoot -WorklogTab 1 -WorklogOpenHoursLog -WorklogOpenHoursYear -WorklogOpenHoursMonth -WorklogOpenHoursWeek
+          NAME=7d-hours-day shoot -WorklogTab 1 -WorklogOpenHoursLog -WorklogOpenHoursYear -WorklogOpenHoursMonth -WorklogOpenHoursWeek -WorklogOpenHoursDay
+          NAME=5-schedule shoot -WorklogTab 3
+          NAME=6-settings shoot -WorklogTab 4
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4

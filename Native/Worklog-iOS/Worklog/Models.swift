@@ -185,7 +185,42 @@ struct OdometerCheck {
     var message: String
 }
 
+/// Where a shift was worked. "Working from home" hours are totalled for the ATO's fixed-rate method.
+enum ShiftPlace: String, Codable, CaseIterable {
+    case workplace = "Workplace", home = "Working from home", road = "On the road", other = "Other"
+}
+
+/// One period of work: clocked on, optional breaks, clocked off.
+struct WorkShift: Codable, Identifiable, Hashable {
+    var id = UUID()
+    var start: Date
+    var end: Date? = nil
+    var breaks: [DateInterval] = []
+    /// Set while on a break that hasn't ended yet.
+    var breakStart: Date? = nil
+    var place: ShiftPlace = .workplace
+    var notes = ""
+    var timeZoneID: String
+    var manual = false
+    func breakSeconds(at now: Date = Date()) -> TimeInterval {
+        breaks.reduce(0) { $0 + $1.duration } + (breakStart.map { max(0, now.timeIntervalSince($0)) } ?? 0)
+    }
+    /// Time worked, with breaks taken out.
+    func workedSeconds(at now: Date = Date()) -> TimeInterval {
+        max(0, (end ?? now).timeIntervalSince(start) - breakSeconds(at: now))
+    }
+    var hours: Double { workedSeconds() / 3600 }
+}
+
+/// "7 h 30 m" for screens; decimal hours for spreadsheets.
+func hoursText(_ seconds: TimeInterval) -> String {
+    let minutes = Int((seconds / 60).rounded())
+    return minutes >= 60 ? "\(minutes / 60) h \(String(format: "%02d", minutes % 60)) m" : "\(minutes) m"
+}
+
 struct WorkData: Codable {
+    var shifts: [WorkShift]? = nil
+    var activeShift: WorkShift? = nil
     var home: Place? = nil
     var workplace: Place? = nil
     var vehicles: [Vehicle]? = nil

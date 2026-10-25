@@ -136,6 +136,85 @@ import Security
         return issues
     }
 
+    // MARK: Hours worked
+
+    var shifts: [WorkShift] { data.shifts ?? [] }
+    @discardableResult func clockOn(place: ShiftPlace, notes: String = "", at now: Date = Date()) -> Bool {
+        guard !loadFailed, data.activeShift == nil else { return false }
+        data.activeShift = WorkShift(start: now, place: place, notes: notes.trimmingCharacters(in: .whitespacesAndNewlines), timeZoneID: data.schedule.timeZoneID)
+        if save() { return true }
+        data.activeShift = nil; return false
+    }
+    @discardableResult func startBreak(at now: Date = Date()) -> Bool {
+        guard var shift = data.activeShift, shift.breakStart == nil, now >= shift.start else { return false }
+        shift.breakStart = now
+        return updateActiveShift(shift)
+    }
+    @discardableResult func endBreak(at now: Date = Date()) -> Bool {
+        guard var shift = data.activeShift, let started = shift.breakStart else { return false }
+        shift.breaks.append(DateInterval(start: started, end: max(started, now)))
+        shift.breakStart = nil
+        return updateActiveShift(shift)
+    }
+    /// Ends the shift (closing any open break) and files it in the timesheet.
+    @discardableResult func clockOff(at now: Date = Date()) -> WorkShift? {
+        guard var shift = data.activeShift else { return nil }
+        let finish = max(shift.start, now)
+        if let started = shift.breakStart { shift.breaks.append(DateInterval(start: started, end: max(started, finish))); shift.breakStart = nil }
+        shift.end = finish
+        let previous = data
+        data.activeShift = nil
+        data.shifts = shifts + [shift]
+        if save() { return shift }
+        data = previous; return nil
+    }
+    private func updateActiveShift(_ shift: WorkShift) -> Bool {
+        let previous = data.activeShift
+        data.activeShift = shift
+        if save() { return true }
+        data.activeShift = previous; return false
+    }
+    /// Adds or replaces a finished shift (manual entry or edit).
+    @discardableResult func saveShift(_ shift: WorkShift) -> Bool {
+        guard let end = shift.end, end > shift.start else { return false }
+        let previous = data.shifts
+        var list = shifts
+        if let i = list.firstIndex(where: { $0.id == shift.id }) { list[i] = shift } else { list.append(shift) }
+        data.shifts = list
+        if save() { return true }
+        data.shifts = previous; return false
+    }
+    func deleteShift(_ id: UUID) throws {
+        guard !loadFailed else { throw StoreError.unavailable }
+        let previous = data.shifts
+        data.shifts = shifts.filter { $0.id != id }
+        if !save() { data.shifts = previous; throw StoreError.unavailable }
+    }
+    /// Timesheet for the financial year, one row per shift.
+    func timesheetExport(year: Int) throws -> URL {
+        let tz = data.schedule.timeZoneID
+        let fy = FinancialYear.interval(year, timeZone: tz)
+        let day = Self.localFormatter(tz, "dd/MM/yyyy"), time = Self.localFormatter(tz, "HH:mm"), weekday = Self.localFormatter(tz, "EEEE")
+        func cell(_ value: String) -> String {
+            let safe = value.first.map { "=+-@\t\r".contains($0) } == true ? "'" + value : value
+            return "\"" + safe.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        }
+        var rows = [["Date", "Day", "Start", "Finish", "Breaks (minutes)", "Hours worked", "Hours (h:mm)", "Location", "Notes", "Entered", "Shift ID"]]
+        let yearShifts = shifts.filter { fy.contains($0.start) }.sorted { $0.start < $1.start }
+        for s in yearShifts {
+            let worked = s.workedSeconds()
+            rows.append([day.string(from: s.start), weekday.string(from: s.start), time.string(from: s.start), s.end.map { time.string(from: $0) } ?? "",
+                         String(Int((s.breakSeconds() / 60).rounded())), String(format: "%.2f", worked / 3600), { let m = Int((worked / 60).rounded()); return String(format: "%d:%02d", m / 60, m % 60) }(),
+                         s.place.rawValue, s.notes, s.manual ? "Added manually" : "Clocked", s.id.uuidString])
+        }
+        let total = yearShifts.reduce(0) { $0 + $1.workedSeconds() } / 3600
+        let wfh = yearShifts.filter { $0.place == .home }.reduce(0) { $0 + $1.workedSeconds() } / 3600
+        rows.append([]); rows.append(["Total hours", "", "", "", "", String(format: "%.2f", total)]); rows.append(["Working from home hours", "", "", "", "", String(format: "%.2f", wfh)])
+        let csv = "\u{FEFF}" + rows.map { $0.map(cell).joined(separator: ",") }.joined(separator: "\r\n")
+        let url = try exportURL("Worklog-timesheet-FY-\(year)-\(year+1).csv")
+        try Data(csv.utf8).write(to: url, options: [.atomic, .completeFileProtection]); return url
+    }
+
     // MARK: Continuing a trip
 
     /// A finished trip can be continued for this long, e.g. after a stop to pick up parts.
@@ -460,7 +539,9 @@ import Security
         try Data(csv.utf8).write(to: register, options: [.atomic, .completeFileProtection])
         let perVehicle = vehicles.map { v in "\(v.displayName): \(String(format: "%.1f", data.trips.filter { $0.vehicleID == v.id }.reduce(0) { $0 + $1.km(in: interval) })) km" }.joined(separator: "; ")
         let checklist = atoChecklist(year: year)
-        let summary = "Worklog accountant export: 1 July \(year) to 30 June \(year+1). Work kilometres: \(String(format: "%.1f", data.trips.reduce(0) { $0 + $1.km(in: interval) })).\(perVehicle.isEmpty ? "" : " By vehicle: \(perVehicle).")\n\nFiles: trip log (all vehicles, and one per vehicle), vehicle logbook summary (make, model, engine, registration, logbook period, odometer readings, business-use percentage), receipt register with tax-invoice ABN check, original receipt PDFs.\n\nATO record check: " + (checklist.isEmpty ? "no missing items found." : "\n- " + checklist.joined(separator: "\n- ")) + "\n\nInvoice categories, amounts and business-use proportions are user-entered and require review. Kilometres come from GPS unless corrected; odometer readings are entered by the driver. The accountant decides deductibility. No automatic deletion applies; keep records for at least 5 years from lodgement.\n"
+        let yearShifts = shifts.filter { interval.contains($0.start) }
+        let hoursLine = " Hours worked: \(String(format: "%.2f", yearShifts.reduce(0) { $0 + $1.workedSeconds() } / 3600)), of which working from home: \(String(format: "%.2f", yearShifts.filter { $0.place == .home }.reduce(0) { $0 + $1.workedSeconds() } / 3600))."
+        let summary = "Worklog accountant export: 1 July \(year) to 30 June \(year+1). Work kilometres: \(String(format: "%.1f", data.trips.reduce(0) { $0 + $1.km(in: interval) })).\(hoursLine)\(perVehicle.isEmpty ? "" : " By vehicle: \(perVehicle).")\n\nFiles: trip log (all vehicles, and one per vehicle), vehicle logbook summary (make, model, engine, registration, logbook period, odometer readings, business-use percentage), receipt register with tax-invoice ABN check, original receipt PDFs.\n\nATO record check: " + (checklist.isEmpty ? "no missing items found." : "\n- " + checklist.joined(separator: "\n- ")) + "\n\nInvoice categories, amounts and business-use proportions are user-entered and require review. Kilometres come from GPS unless corrected; odometer readings are entered by the driver. The accountant decides deductibility. No automatic deletion applies; keep records for at least 5 years from lodgement.\n"
         let note = try exportURL("Worklog-accountant-notes-FY-\(year).txt")
         try Data(summary.utf8).write(to: note, options: [.atomic, .completeFileProtection])
         var transactionFiles: [URL] = []
@@ -469,7 +550,7 @@ import Security
             try receiptBytes(invoice).write(to: url, options: [.atomic, .completeFileProtection]); transactionFiles.append(url)
         }
         let vehicleLogs = vehicles.count > 1 ? try vehicles.filter { v in data.trips.contains { $0.vehicleID == v.id } }.map { try csvExport(year: year, vehicle: $0) } : []
-        return [try csvExport(year: year), try logbookSummaryExport(year: year), register, note] + vehicleLogs + receipts.map { pdfURL($0) } + transactionFiles
+        return [try csvExport(year: year), try logbookSummaryExport(year: year), try timesheetExport(year: year), register, note] + vehicleLogs + receipts.map { pdfURL($0) } + transactionFiles
     }
     static func localFormatter(_ timeZoneID: String, _ format: String) -> DateFormatter {
         let f = DateFormatter(); f.locale = Locale(identifier: "en_AU"); f.timeZone = TimeZone(identifier: timeZoneID) ?? .current; f.dateFormat = format; return f

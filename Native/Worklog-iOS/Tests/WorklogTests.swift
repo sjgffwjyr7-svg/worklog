@@ -491,6 +491,33 @@ final class ReceiptTests: XCTestCase {
         let plain = PDFDocument(); plain.insert(try XCTUnwrap(PDFPage(image: photo)), at: 0)
         XCTAssertLessThan(pdf.count / 2, try XCTUnwrap(plain.dataRepresentation()).count, "Smaller than the old full-resolution page")
     }
+    @MainActor func testClockOnBreaksAndClockOffRecordHoursWorked() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = WorkStore(root: root)
+        let start = FinancialYear.interval(FinancialYear.startYear()).start.addingTimeInterval(7 * 86400 + 7 * 3600)
+        XCTAssertTrue(store.clockOn(place: .home, notes: "Quotes", at: start))
+        XCTAssertFalse(store.clockOn(place: .workplace, at: start), "Can't clock on twice")
+        XCTAssertTrue(store.startBreak(at: start.addingTimeInterval(4 * 3600)))
+        XCTAssertEqual(WorkStore(root: root).data.activeShift?.breakStart, start.addingTimeInterval(4 * 3600), "Open break survives a restart")
+        XCTAssertTrue(store.endBreak(at: start.addingTimeInterval(4.5 * 3600)))
+        // Clocking off during a second break closes it first.
+        XCTAssertTrue(store.startBreak(at: start.addingTimeInterval(8 * 3600)))
+        let shift = try XCTUnwrap(store.clockOff(at: start.addingTimeInterval(8.25 * 3600)))
+        XCTAssertNil(store.data.activeShift)
+        XCTAssertEqual(shift.breakSeconds(), 45 * 60, accuracy: 1)
+        XCTAssertEqual(shift.workedSeconds(), 7.5 * 3600, accuracy: 1, "8 h 15 m less 45 m of breaks")
+        XCTAssertEqual(hoursText(shift.workedSeconds()), "7 h 30 m")
+        XCTAssertEqual(WorkStore(root: root).shifts.count, 1)
+        var manual = WorkShift(start: start.addingTimeInterval(86400), end: start.addingTimeInterval(86400 + 3600), timeZoneID: "Australia/Perth", manual: true)
+        XCTAssertTrue(store.saveShift(manual))
+        manual.end = manual.start
+        XCTAssertFalse(store.saveShift(manual), "Finish must be after start")
+        let csv = try String(contentsOf: store.timesheetExport(year: FinancialYear.startYear()), encoding: .utf8)
+        XCTAssertTrue(csv.contains("\"7.50\"")); XCTAssertTrue(csv.contains("Working from home")); XCTAssertTrue(csv.contains("\"8.50\""), "Total hours")
+        try store.deleteShift(shift.id)
+        XCTAssertEqual(WorkStore(root: root).shifts.map(\.id), [manual.id])
+    }
     @MainActor func testDeletingTripAndReceiptIsPermanent() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

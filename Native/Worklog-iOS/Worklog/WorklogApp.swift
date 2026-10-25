@@ -72,6 +72,19 @@ enum DemoMode {
         for i in store.data.trips.indices { store.data.trips[i].vehicleID = store.data.trips[i].vehicle.hasPrefix("Ranger") ? ranger.id : hilux.id }
         store.data.trips[0].odometerStart = 54_310; store.data.trips[0].odometerEnd = 54_328
         store.data.lastTripDescription = "Supply pickup — Bunnings"
+        let tz = "Australia/Perth"
+        let dayStart = TripCalendar.calendar(tz).startOfDay(for: now)
+        store.data.shifts = (1...8).map { back in
+            let d = dayStart.addingTimeInterval(Double(-back) * day)
+            var s = WorkShift(start: d.addingTimeInterval(7 * hour), end: d.addingTimeInterval(15.75 * hour), place: back % 4 == 0 ? .home : .workplace, notes: back == 2 ? "VMS service, Narromine" : "", timeZoneID: tz)
+            s.breaks = [DateInterval(start: d.addingTimeInterval(12 * hour), duration: 0.5 * hour)]
+            return s
+        }
+        if flag("-WorklogDemoOnShift") {
+            var active = WorkShift(start: now.addingTimeInterval(-3.2 * hour), place: .workplace, notes: "Parlour install", timeZoneID: tz)
+            active.breaks = [DateInterval(start: now.addingTimeInterval(-1.5 * hour), duration: 0.25 * hour)]
+            store.data.activeShift = active
+        }
         store.data.invoices = [Invoice(supplier: "Bunnings Warehouse", number: "8841", date: now - 0.3 * day, total: "21.48", gst: "1.95", notes: "", category: ExpenseCategories.all[2], pdfFilename: "demo-1.pdf"),
                                Invoice(supplier: "Ampol Dubbo", number: "", date: now - 2 * day, total: "88.14", gst: "8.01", notes: "", category: ExpenseCategories.all[0], pdfFilename: "demo-2.pdf"),
                                Invoice(supplier: "Telstra", number: "T-2231", date: now - 9 * day, total: "65.00", gst: "5.91", notes: "", category: ExpenseCategories.all[3], pdfFilename: "demo-3.pdf"),
@@ -293,6 +306,65 @@ struct ContinueTripIntent: AppIntent {
     }
 }
 
+// Hours worked by voice. These don't need GPS, so they run without opening the app.
+struct StartWorkIntent: AppIntent {
+    static var title: LocalizedStringResource = "Start work"
+    static var description = IntentDescription("Clock on: records today's date and the start time of your work.")
+    static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+
+    @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
+        let store = WorklogRuntime.shared.store
+        guard !store.loadFailed else { return .result(dialog: "Worklog cannot open its saved records. Open the app to resolve the storage error.") }
+        if let shift = store.data.activeShift {
+            return .result(dialog: "You're already clocked on since \(shift.start.formatted(date: .omitted, time: .shortened)).")
+        }
+        let place = LastShiftPlace.value
+        guard store.clockOn(place: place) else { return .result(dialog: "Work wasn't started because saving failed. Open Worklog to check storage.") }
+        return .result(dialog: "Clocked on at \(Date().formatted(date: .omitted, time: .shortened)), \(place.rawValue.lowercased()). Say finish work in Worklog when you're done.")
+    }
+}
+
+struct FinishWorkIntent: AppIntent {
+    static var title: LocalizedStringResource = "Finish work"
+    static var description = IntentDescription("Clock off: records the finish time and tells you the hours worked.")
+    static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+
+    @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
+        let store = WorklogRuntime.shared.store
+        guard store.data.activeShift != nil else { return .result(dialog: "You're not clocked on. Say start work in Worklog to begin, or add the hours in the app.") }
+        guard let shift = store.clockOff() else { return .result(dialog: "Work wasn't finished because saving failed. Open Worklog to check storage.") }
+        let tz = store.data.schedule.timeZoneID
+        let week = DateInterval(start: TripCalendar.weekStart(of: Date(), timeZoneID: tz), duration: 7 * 86400)
+        let weekSeconds = store.shifts.filter { week.contains($0.start) }.reduce(0) { $0 + $1.workedSeconds() }
+        return .result(dialog: "Clocked off. You worked \(hoursText(shift.workedSeconds())) this shift, and \(hoursText(weekSeconds)) so far this week.")
+    }
+}
+
+struct StartBreakIntent: AppIntent {
+    static var title: LocalizedStringResource = "Start break"
+    static var description = IntentDescription("Pause your hours for a break.")
+    static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
+        let store = WorklogRuntime.shared.store
+        guard let shift = store.data.activeShift else { return .result(dialog: "You're not clocked on.") }
+        guard shift.breakStart == nil else { return .result(dialog: "You're already on a break.") }
+        guard store.startBreak() else { return .result(dialog: "The break wasn't saved. Open Worklog to check storage.") }
+        return .result(dialog: "Break started. Say end my break in Worklog when you're back.")
+    }
+}
+
+struct EndBreakIntent: AppIntent {
+    static var title: LocalizedStringResource = "End break"
+    static var description = IntentDescription("Resume your hours after a break.")
+    static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+    @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
+        let store = WorklogRuntime.shared.store
+        guard let shift = store.data.activeShift, let started = shift.breakStart else { return .result(dialog: "You're not on a break.") }
+        guard store.endBreak() else { return .result(dialog: "The break wasn't saved. Open Worklog to check storage.") }
+        return .result(dialog: "Welcome back. That break was \(hoursText(Date().timeIntervalSince(started))).")
+    }
+}
+
 struct WorklogShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: DictateWorkTripIntent(), phrases: [
@@ -315,6 +387,24 @@ struct WorklogShortcuts: AppShortcutsProvider {
             "Resume my trip in \(.applicationName)",
             "Head back in \(.applicationName)"
         ], shortTitle: "Continue last trip", systemImageName: "arrow.uturn.backward")
+        AppShortcut(intent: StartWorkIntent(), phrases: [
+            "Start work in \(.applicationName)",
+            "Clock on in \(.applicationName)",
+            "Start my shift in \(.applicationName)"
+        ], shortTitle: "Start work", systemImageName: "clock.badge.checkmark")
+        AppShortcut(intent: FinishWorkIntent(), phrases: [
+            "Finish work in \(.applicationName)",
+            "Clock off in \(.applicationName)",
+            "End my shift in \(.applicationName)"
+        ], shortTitle: "Finish work", systemImageName: "clock.badge.xmark")
+        AppShortcut(intent: StartBreakIntent(), phrases: [
+            "Start my break in \(.applicationName)",
+            "Take a break in \(.applicationName)"
+        ], shortTitle: "Start break", systemImageName: "cup.and.saucer")
+        AppShortcut(intent: EndBreakIntent(), phrases: [
+            "End my break in \(.applicationName)",
+            "Back to work in \(.applicationName)"
+        ], shortTitle: "End break", systemImageName: "play")
         AppShortcut(intent: SelectVehicleIntent(), phrases: [
             "Change vehicle in \(.applicationName)",
             "Switch vehicle in \(.applicationName)",

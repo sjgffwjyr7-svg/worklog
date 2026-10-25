@@ -13,3 +13,11 @@ Preset commands such as “Start a supply pickup trip in Worklog” remain avail
 A cancelled confirmation starts nothing. An existing active trip, denied location permission or failed local saving prevents a new trip. iOS requires the iPhone to be unlocked (Face ID or passcode) before Siri runs a Worklog action; Worklog's own app lock keeps its screens locked and is not needed for Siri. Give commands while parked.
 
 This uses Apple App Intents in the native app; the HTML edition has no Siri integration. Source/package checks were completed in the Linux workspace. Xcode compilation, Siri phrase recognition, voice number entry, cancellation, app-lock interactions and GPS on a physical iPhone still need testing. Do not assume a single sentence with arbitrary purpose and odometer will always be understood; use the prompted conversation.
+
+## Hours worked
+
+- "Hey Siri, start work in Worklog" (or "clock on in Worklog") records the date and start time, using the work location chosen last time.
+- "Hey Siri, finish work in Worklog" (or "clock off in Worklog") records the finish time and reads back the hours for the shift and the week so far.
+- "Hey Siri, start my break in Worklog" / "end my break in Worklog" pause and resume the hours.
+
+These run without opening Worklog. For a shorter phrase without "in Worklog", create a personal shortcut in the Shortcuts app named "Start work" that runs Worklog's Start work action (and "Finish work" the same way).
