@@ -39,6 +39,10 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Practice Siri in the Test centre listens to your voice so you can rehearse Worklog's voice commands.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Practice Siri turns what you say into text on this iPhone so it can be matched to Worklog's voice commands.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to unlock your Worklog trip and invoice records.</string>
 </dict>

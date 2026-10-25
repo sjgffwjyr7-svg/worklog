@@ -440,6 +440,7 @@ struct StorageView: View {
     @State private var notice = ""
     @State private var exportYear = FinancialYear.startYear()
     @State private var backupPassword: BackupPasswordView.Mode?
+    @State private var openTests = false
     var thisYearKm: Double {
         let tz = store.data.schedule.timeZoneID
         let span = FinancialYear.interval(FinancialYear.startYear(for: Date(), timeZone: tz), timeZone: tz)
@@ -490,6 +491,11 @@ struct StorageView: View {
                 VehiclesSettingsSection()
                 PlacesSettingsSection()
                 AppLockSettings()
+                Section {
+                    NavigationLink { TestCentreView() } label: {
+                        Label("Test centre — app checks & practice Siri", systemImage: "checkmark.seal")
+                    }
+                } header: { Text("Testing") }
                 Section("On this iPhone") {
                     LabeledContent("Work trips", value: "\(store.data.trips.count)")
                     LabeledContent("Invoices", value: "\(store.data.invoices.count)")
@@ -532,6 +538,8 @@ struct StorageView: View {
                     }
                 } catch { store.error = error.localizedDescription }
             }
+            .navigationDestination(isPresented: $openTests) { TestCentreView() }
+            .onAppear { if DemoMode.flag("-WorklogOpenTestCentre") { openTests = true } }
             .sheet(item: $backupPassword) { mode in
                 BackupPasswordView(mode: mode) { password in
                     switch mode {

@@ -518,6 +518,42 @@ final class ReceiptTests: XCTestCase {
         try store.deleteShift(shift.id)
         XCTAssertEqual(WorkStore(root: root).shifts.map(\.id), [manual.id])
     }
+    @MainActor func testOnPhoneAppChecksAllPass() {
+        let results = AppSelfTest.run()
+        XCTAssertGreaterThanOrEqual(results.count, 11)
+        for r in results { XCTAssertTrue(r.passed, "\(r.name): \(r.detail)") }
+    }
+    @MainActor func testPracticeSiriRunsConversationsWithoutTouchingRealRecords() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let real = WorkStore(root: root)
+        let ute = Vehicle(name: "Hilux", registration: "1ABC234", startingOdometer: 54_200)
+        let ranger = Vehicle(name: "Ranger", startingOdometer: 128_390)
+        real.saveVehicle(ute); real.saveVehicle(ranger)
+        let siri = PracticeSiri(realStore: real, recorder: nil)
+        siri.speakReplies = false
+        siri.hear("Hey Siri, start work in Worklog")
+        XCTAssertTrue(siri.lines.last?.text.hasPrefix("Clocked on") ?? false)
+        XCTAssertNotNil(siri.sandbox.data.activeShift)
+        XCTAssertNil(real.data.activeShift, "Practice mode must not change real records")
+        siri.hear("Hey Siri, start a work trip in Worklog")
+        XCTAssertEqual(siri.lines.last?.text, "What is the purpose of this work trip?")
+        siri.hear("supply pickup")
+        siri.hear("128 450")
+        XCTAssertTrue(siri.lines.last?.text.contains("Ranger") ?? false, "Odometer near the Ranger's reading switches vehicle")
+        siri.hear("yes")
+        XCTAssertEqual(siri.sandbox.data.active?.purpose, "Supply pickup")
+        XCTAssertEqual(siri.sandbox.data.active?.odometerStart, 128_450)
+        XCTAssertNil(real.data.active)
+        siri.hear("Start a trip for parts")
+        XCTAssertTrue(siri.lines.last?.text.contains("already recording") ?? false)
+        siri.hear("finish work")
+        XCTAssertTrue(siri.lines.last?.text.hasPrefix("Clocked off") ?? false)
+        siri.hear("sing me a song")
+        XCTAssertTrue(siri.lines.last?.text.hasPrefix("Sorry") ?? false)
+        XCTAssertEqual(PracticeSiri.purpose(in: "start a supply pickup trip"), "Supply pickup")
+        XCTAssertNil(PracticeSiri.purpose(in: "start a work trip"))
+    }
     @MainActor func testDeletingTripAndReceiptIsPermanent() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

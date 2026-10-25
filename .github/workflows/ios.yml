@@ -72,6 +72,8 @@ jobs:
           NAME=7d-hours-day shoot -WorklogTab 1 -WorklogOpenHoursLog -WorklogOpenHoursYear -WorklogOpenHoursMonth -WorklogOpenHoursWeek -WorklogOpenHoursDay
           NAME=5-schedule shoot -WorklogTab 3
           NAME=6-settings shoot -WorklogTab 4
+          NAME=8-test-centre shoot -WorklogTab 4 -WorklogOpenTestCentre -WorklogRunChecks
+          NAME=8b-practice-siri shoot -WorklogTab 4 -WorklogOpenTestCentre -WorklogOpenPracticeSiri -WorklogPracticeDemo
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
