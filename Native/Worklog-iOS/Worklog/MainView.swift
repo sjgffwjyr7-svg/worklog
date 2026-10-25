@@ -1479,9 +1479,13 @@ struct HoursDayView: View {
         .alert("Delete these hours?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), presenting: pendingDelete) { shift in
             Button("Delete hours", role: .destructive) { do { try store.deleteShift(shift.id) } catch { store.error = error.localizedDescription } }
             Button("Cancel", role: .cancel) {}
-        } message: { shift in
-            Text(shift.start.formatted(date: .abbreviated, time: .shortened) + " – " + (shift.end?.formatted(date: .omitted, time: .shortened) ?? "") + "\n" + hoursText(shift.workedSeconds()) + " · " + shift.place.rawValue + "\n\nThis can't be undone.")
-        }
+        } message: { shift in Text(deleteMessage(shift)) }
+    }
+    func deleteMessage(_ shift: WorkShift) -> String {
+        let started: String = shift.start.formatted(date: .abbreviated, time: .shortened)
+        let finished: String = shift.end?.formatted(date: .omitted, time: .shortened) ?? ""
+        let worked: String = hoursText(shift.workedSeconds())
+        return "\(started) – \(finished)\n\(worked) · \(shift.place.rawValue)\n\nThis can't be undone."
     }
 }
 
